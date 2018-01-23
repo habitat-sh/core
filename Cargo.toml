@@ -3,6 +3,5 @@ debug = true
 
 [workspace]
 members = [
-  "components/core",
-  "components/win-users"
+  "components/core"
 ]
