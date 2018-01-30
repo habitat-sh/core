@@ -1,0 +1,33 @@
+
+image: Visual Studio 2017
+
+cache:
+  - c:\cargo\registry
+  - c:\cargo\git
+  - c:\projects\core\target
+
+branches:
+  only:
+    - master
+
+init:
+  - git config --global core.eol lf
+  - mkdir c:\cargo
+  - mkdir c:\multirust
+  - SET PATH=c:\cargo\bin;%PATH%
+
+clone_folder: c:\projects\core
+
+environment:
+  CARGO_HOME: "c:\\cargo"
+  RUSTUP_HOME: "c:\\multirust"
+  CARGO_TARGET_DIR: "c:\\projects\\core\\target"
+  RUSTUP_USE_HYPER: 1
+  CARGO_HTTP_CHECK_REVOKE: false
+  HAB_WINDOWS_STUDIO: true
+
+  matrix:
+    - hab_components: "core;win-users"
+
+build_script:
+  - c:\projects\core\support\ci\appveyor.bat
