@@ -33,23 +33,24 @@ pub fn get_current_groupname() -> Option<String> {
     linux_users::get_current_groupname()
 }
 
+pub fn get_effective_username() -> Option<String> {
+    linux_users::get_effective_username()
+}
+
 pub fn get_effective_uid() -> u32 {
     linux_users::get_effective_uid()
 }
 
+pub fn get_effective_gid() -> u32 {
+    linux_users::get_effective_gid()
+}
+
+pub fn get_effective_groupname() -> Option<String> {
+    linux_users::get_effective_groupname()
+}
+
 pub fn get_home_for_user(username: &str) -> Option<PathBuf> {
     linux_users::get_user_by_name(username).map(|u| PathBuf::from(u.home_dir()))
-}
-
-pub fn get_home_for_current_user() -> Option<PathBuf> {
-    match get_current_username() {
-        Some(user) => linux_users::get_user_by_name(&user).map(|u| PathBuf::from(u.home_dir())),
-        None => None,
-    }
-}
-
-pub fn get_primary_gid_for_user(username: &str) -> Option<u32> {
-    linux_users::get_user_by_name(username).map(|u| u.primary_group_id())
 }
 
 pub fn root_level_account() -> String {
