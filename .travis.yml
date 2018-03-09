@@ -8,8 +8,6 @@ os: linux
 env:
   global:
     - PATH=$HOME/.cargo/bin:$PATH
-    # Habitat Core Rust crate components
-    - _RUST_HAB_LIB_COMPONENTS=components/core
 
 matrix:
   include:
