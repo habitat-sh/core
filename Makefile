@@ -1,4 +1,4 @@
-LIB = core
+LIB = core http-client
 ALL = $(LIB)
 
 .DEFAULT_GOAL := build-lib
