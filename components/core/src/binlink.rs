@@ -15,7 +15,10 @@
 use env;
 
 /// Default Binlink Dir
+#[cfg(not(target_os = "macos"))]
 pub const DEFAULT_BINLINK_DIR: &'static str = "/bin";
+#[cfg(target_os = "macos")]
+pub const DEFAULT_BINLINK_DIR: &'static str = "/usr/local/bin";
 
 /// Binlink Dir Environment variable
 pub const BINLINK_DIR_ENVVAR: &'static str = "HAB_BINLINK_DIR";
