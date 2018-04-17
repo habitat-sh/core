@@ -7,7 +7,7 @@ os: linux
 
 env:
   global:
-    - PATH=$HOME/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/bin:$HOME/.cargo/bin:$PATH
+    - PATH=$HOME/.cargo/bin:$PATH
 
 matrix:
   include:
