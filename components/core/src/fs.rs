@@ -295,7 +295,7 @@ where
         ));
         let candidate = fs_root_path.as_ref().join(stripped).join(command.as_ref());
         if candidate.is_file() {
-            return Ok(Some(path.join(command.as_ref())));
+            return Ok(Some(path.join(candidate)));
         } else {
             match find_command_with_pathext(&candidate) {
                 Some(result) => return Ok(Some(result)),
