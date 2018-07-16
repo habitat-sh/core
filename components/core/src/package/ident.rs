@@ -91,27 +91,64 @@ impl PackageIdent {
         }
     }
 
-    pub fn archive_name(&self) -> Option<String> {
-        self.archive_name_impl(&PackageTarget::default())
+    pub fn archive_name(&self) -> Result<String> {
+        self.archive_name_impl(PackageTarget::active_target())
     }
 
-    pub fn archive_name_with_target(&self, ref target: &PackageTarget) -> Option<String> {
+    pub fn archive_name_with_target(&self, ref target: &PackageTarget) -> Result<String> {
         self.archive_name_impl(target)
     }
 
-    fn archive_name_impl(&self, ref target: &PackageTarget) -> Option<String> {
+    /// Produces an iterator over the ident's internal components viewed as [`&str`] slices.
+    ///
+    /// Note that no special interpretation should be taken from the component slices as their
+    /// meaning is internal to this struct's implementation.
+    ///
+    /// [`&str`]: https://doc.rust-lang.org/std/primitive.str.html
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::str::FromStr;
+    /// use habitat_core::package::PackageIdent;
+    ///
+    /// // All ident components are iterated through with a fully qualified ident
+    /// let full_ident = PackageIdent::from_str("acme/myapp/1.2.3/20180710122645").unwrap();
+    /// let mut it = full_ident.iter();
+    ///
+    /// assert_eq!(it.next(), Some("acme"));
+    /// assert_eq!(it.next(), Some("myapp"));
+    /// assert_eq!(it.next(), Some("1.2.3"));
+    /// assert_eq!(it.next(), Some("20180710122645"));
+    /// assert_eq!(it.next(), None);
+    ///
+    /// // Any optional ident components are short-circuited
+    /// let fuzzy_ident = PackageIdent::from_str("acme/myapp").unwrap();
+    /// let mut it = fuzzy_ident.iter();
+    ///
+    /// assert_eq!(it.next(), Some("acme"));
+    /// assert_eq!(it.next(), Some("myapp"));
+    /// assert_eq!(it.next(), None);
+    /// ```
+    pub fn iter(&self) -> Iter {
+        Iter {
+            ident: self,
+            pos: 0,
+        }
+    }
+
+    fn archive_name_impl(&self, ref target: &PackageTarget) -> Result<String> {
         if self.fully_qualified() {
-            Some(format!(
-                "{}-{}-{}-{}-{}-{}.hart",
+            Ok(format!(
+                "{}-{}-{}-{}-{}.hart",
                 self.origin,
                 self.name,
                 self.version.as_ref().unwrap(),
                 self.release.as_ref().unwrap(),
-                target.architecture,
-                target.platform
+                target
             ))
         } else {
-            None
+            Err(Error::FullyQualifiedPackageIdentRequired(self.to_string()))
         }
     }
 }
@@ -281,6 +318,49 @@ impl<'a> From<PackageIdent> for Cow<'a, PackageIdent> {
 impl<'a> From<&'a PackageIdent> for Cow<'a, PackageIdent> {
     fn from(pi: &'a PackageIdent) -> Cow<'a, PackageIdent> {
         Cow::Borrowed(pi)
+    }
+}
+
+/// An iterator over the [`&str`] slices of a [`PackageIdent`].
+///
+/// This `struct` is created by the [`iter`] method on [`PackageIdent`], see its documentation for
+/// more.
+///
+/// [`&str`]: https://doc.rust-lang.org/std/primitive.str.html
+/// [`iter`]: struct.PackageIdent.html#method.iter
+/// [`PackageIdent`]: struct.PackageIdent.html
+///
+/// # Examples
+///
+/// ```
+/// use std::str::FromStr;
+/// use habitat_core::package::PackageIdent;
+///
+/// let target = PackageIdent::from_str("acme/myapp/1.2.3").unwrap();
+///
+/// for component in target.iter() {
+///     println!("{}", component);
+/// }
+/// ```
+pub struct Iter<'a> {
+    // The ident to iterate over
+    ident: &'a PackageIdent,
+    // The position through the ident
+    pos: usize,
+}
+
+impl<'a> Iterator for Iter<'a> {
+    type Item = &'a str;
+
+    fn next(&mut self) -> Option<&'a str> {
+        self.pos += 1;
+        match self.pos {
+            1 => Some(self.ident.origin()),
+            2 => Some(self.ident.name()),
+            3 => self.ident.version(),
+            4 => self.ident.release(),
+            _ => None,
+        }
     }
 }
 
@@ -642,5 +722,90 @@ mod tests {
         assert!(!super::is_valid_origin_name("!foo"));
         assert!(!super::is_valid_origin_name("foo bar"));
         assert!(!super::is_valid_origin_name("0xDEADBEEF"));
+    }
+
+    #[test]
+    fn archive_name() {
+        let ident = PackageIdent::from_str("tom-petty/the_last__dj/1.0.0/20180701125610").unwrap();
+        let target = PackageTarget::active_target();
+
+        assert_eq!(
+            format!(
+                "{}-{}.hart",
+                "tom-petty-the_last__dj-1.0.0-20180701125610", target
+            ),
+            ident.archive_name().unwrap()
+        );
+    }
+
+    #[test]
+    fn archive_name_with_fuzzy_ident() {
+        let ident = PackageIdent::from_str("acme/not-enough").unwrap();
+
+        match ident.archive_name() {
+            Err(Error::FullyQualifiedPackageIdentRequired(i)) => {
+                assert_eq!("acme/not-enough".to_string(), i)
+            }
+            Err(e) => panic!("Wrong expected error, found={:?}", e),
+            Ok(s) => panic!("Should not have computed a result, returned={}", s),
+        }
+    }
+
+    #[test]
+    fn archive_name_with_target() {
+        let ident = PackageIdent::from_str("tom-petty/the_last__dj/1.0.0/20180701125610").unwrap();
+        let target = PackageTarget::from_str("x86_64-linux").unwrap();
+
+        assert_eq!(
+            String::from("tom-petty-the_last__dj-1.0.0-20180701125610-x86_64-linux.hart"),
+            ident.archive_name_with_target(&target).unwrap()
+        );
+    }
+
+    #[test]
+    fn archive_name_with_target_with_fuzzy_ident() {
+        let ident = PackageIdent::from_str("acme/not-enough").unwrap();
+        let target = PackageTarget::from_str("x86_64-linux").unwrap();
+
+        match ident.archive_name_with_target(&target) {
+            Err(Error::FullyQualifiedPackageIdentRequired(i)) => {
+                assert_eq!("acme/not-enough".to_string(), i)
+            }
+            Err(e) => panic!("Wrong expected error, found={:?}", e),
+            Ok(s) => panic!("Should not have computed a result, returned={}", s),
+        }
+    }
+
+    #[test]
+    fn iter_with_fully_qualified() {
+        let ident = PackageIdent::from_str("cypress-hill/rise-up/2.3.1/20180701141405").unwrap();
+        let mut iter = ident.iter();
+
+        assert_eq!(Some("cypress-hill"), iter.next());
+        assert_eq!(Some("rise-up"), iter.next());
+        assert_eq!(Some("2.3.1"), iter.next());
+        assert_eq!(Some("20180701141405"), iter.next());
+        assert_eq!(None, iter.next());
+    }
+
+    #[test]
+    fn iter_without_release() {
+        let ident = PackageIdent::from_str("cypress-hill/rise-up/2.3.1").unwrap();
+        let mut iter = ident.iter();
+
+        assert_eq!(Some("cypress-hill"), iter.next());
+        assert_eq!(Some("rise-up"), iter.next());
+        assert_eq!(Some("2.3.1"), iter.next());
+        assert_eq!(None, iter.next());
+    }
+
+    #[test]
+    fn iter_without_version() {
+        let ident = PackageIdent::from_str("cypress-hill/rise-up").unwrap();
+        let mut iter = ident.iter();
+
+        assert_eq!(Some("cypress-hill"), iter.next());
+        assert_eq!(Some("rise-up"), iter.next());
+        assert_eq!(None, iter.next());
     }
 }
