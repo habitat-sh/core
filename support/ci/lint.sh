@@ -173,7 +173,7 @@ setup() {
   fi
   workdir="$(mktemp -d -p "$_tmp" 2> /dev/null || mktemp -d "${_tmp}/lint.XXXX")"
   # shellcheck disable=2154
-  trap 'code=$?; rm -rf $workdir; exit $code' INT TERM EXIT
+  trap 'rm -rf $workdir' INT TERM EXIT
 
   # Prepare a file to track files which failed linting
   failed="$workdir/failed.log"
