@@ -20,10 +20,7 @@ main() {
 }
 
 print_help() {
-  need_cmd cat
-
-  cat <<USAGE
-$program
+  echo "$program
 
 Authors: $author
 
@@ -74,7 +71,7 @@ EXAMPLES:
     # two Travis-specific environment variables)
     $program
 
-USAGE
+"
 }
 
 parse_cli_args() {
