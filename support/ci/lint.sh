@@ -123,7 +123,9 @@ parse_cli_args() {
       -f|--files)
         lint=files
         shift
-        files="$*"
+        # Note: this is effectively a global variable, and is used
+        # later in lint_files
+        files=("$@")
         if [[ -z "$files" ]]; then
           warn "--files option requires one or more file values"
           print_help
@@ -186,28 +188,28 @@ setup() {
 }
 
 lint_files() {
-  local _input_files_cmd _file
+  local _file
 
   case "$lint" in
     all)
-      _input_files_cmd="find . -type f -name '*.rs'"
-      info "Linting all files, selecting files via: '$_input_files_cmd'"
+      readarray -t files < <(find . -type f -name '*.rs')
+      info "Linting all files"
       ;;
     staged)
-      _input_files_cmd="git diff --name-only --cached"
-      info "Linting staged changes, selecting files via: '$_input_files_cmd'"
+      readarray -t files < <(git diff --name-only --cached)
+      info "Linting staged changes"
       ;;
     files)
-      _input_files_cmd="echo '$files'"
-      info "Linting specific files: $files"
+      # files was populated up in parse_cli_args
+      info "Linting files specified with --files"
       ;;
     git)
-      _input_files_cmd="git diff-tree --no-commit-id --name-only -r $git"
-      info "Linting files from Git via: '$_input_files_cmd'"
+      readarray -t files < <(git diff-tree --no-commit-id --name-only -r $git)
+      info "Linting files from Git: $git"
       ;;
     unstaged)
-      _input_files_cmd="git diff --name-only"
-      info "Linting Unstaged changes, selecting files via: '$_input_files_cmd'"
+      readarray -t files < <(git diff --name-only)
+      info "Linting unstaged changes"
       ;;
     *)
       exit_with "Invalid lint type: $lint" 5
@@ -216,7 +218,7 @@ lint_files() {
 
   echo
 
-  eval "$_input_files_cmd" | while read -r _file; do
+  for _file in "${files[@]}"; do
     case "${_file##*.}" in
       rs)
         lint_file "$_file"
