@@ -31,7 +31,7 @@ USAGE:
 
 FLAGS:
     -a, --all         Lints all source files, ignoring status of Git repository
-    -c, --cached      Lints all currently staged files in Git repository
+    -s, --staged      Lints all currently staged files in Git repository
     -u, --unstaged    Lints all currently unstaged files in Git repository
     -h, --help        Prints help information
 
@@ -53,7 +53,7 @@ EXAMPLES:
     $program --all
 
     # Lint all staged Git files, ready to commit
-    $program --cached
+    $program --staged
 
     # Lint all unstaged Git files, not yet staged for commit
     $program --unstaged
@@ -85,7 +85,7 @@ parse_cli_args() {
       lint=unstaged
       info "Unstaged changes detected running in '$lint' lint mode"
     elif [[ $(git diff --name-only --cached | wc -l) -gt 0 ]]; then
-      lint=cached
+      lint=staged
       info "Staged changes detected, running in '$lint' lint mode"
     else
       # Fix commit range in Travis, if set.
@@ -108,11 +108,11 @@ parse_cli_args() {
           exit_with "Invalid usage" 1
         fi
         ;;
-      -c|--cached)
-        lint=cached
+      -s|--staged)
+        lint=staged
         shift
         if [[ -n "${1:-}" ]]; then
-          warn "Cannot combine --cached with other flags or files"
+          warn "Cannot combine --staged with other flags or files"
           print_help
           exit_with "Invalid usage" 1
         fi
@@ -151,7 +151,7 @@ parse_cli_args() {
         lint=unstaged
         shift
         if [[ -n "${1:-}" ]]; then
-          warn "Cannot combine --staged with other flags or files"
+          warn "Cannot combine --unstaged with other flags or files"
           print_help
           exit_with "Invalid usage" 1
         fi
@@ -192,7 +192,7 @@ lint_files() {
       _input_files_cmd="find . -type f -name '*.rs'"
       info "Linting all files, selecting files via: '$_input_files_cmd'"
       ;;
-    cached)
+    staged)
       need_cmd git
       _input_files_cmd="git diff --name-only --cached"
       info "Linting staged changes, selecting files via: '$_input_files_cmd'"
