@@ -9,6 +9,12 @@ main() {
   if [ -n "${DEBUG:-}" ]; then set -x; fi
 
   need_cmd basename
+  need_cmd dirname
+  need_cmd find
+  need_cmd git
+  need_cmd realpath
+  need_cmd rustfmt
+
   program="$(basename "$0")"
   author="The Habitat Maintainers <humans@habitat.sh>"
 
@@ -77,8 +83,6 @@ EXAMPLES:
 parse_cli_args() {
   if [[ -z "${1:-}" ]]; then
     info "No explicit mode, attempting to auto detect..."
-
-    need_cmd git
 
     if [[ $(git diff --name-only) ]]; then
       lint=unstaged
@@ -178,7 +182,6 @@ setup() {
   # Prepare a file to track files which failed linting
   failed="$workdir/failed.log"
 
-  need_cmd rustfmt
   info "Running rustfmt version '$(rustfmt --version)'"
 }
 
@@ -187,12 +190,10 @@ lint_files() {
 
   case "$lint" in
     all)
-      need_cmd find
       _input_files_cmd="find . -type f -name '*.rs'"
       info "Linting all files, selecting files via: '$_input_files_cmd'"
       ;;
     staged)
-      need_cmd git
       _input_files_cmd="git diff --name-only --cached"
       info "Linting staged changes, selecting files via: '$_input_files_cmd'"
       ;;
@@ -201,12 +202,10 @@ lint_files() {
       info "Linting specific files: $files"
       ;;
     git)
-      need_cmd git
       _input_files_cmd="git diff-tree --no-commit-id --name-only -r $git"
       info "Linting files from Git via: '$_input_files_cmd'"
       ;;
     unstaged)
-      need_cmd git
       _input_files_cmd="git diff --name-only"
       info "Linting Unstaged changes, selecting files via: '$_input_files_cmd'"
       ;;
@@ -244,11 +243,6 @@ lint_file() {
   local _file="$1"
   local _rf_out _rf_exit _diff_out _diff_exit
 
-  need_cmd basename
-  need_cmd dirname
-  need_cmd realpath
-  need_cmd rustfmt
-
   if [[ ! -e "$_file" ]]; then
     # Skip files which were deleted
     return 0
@@ -264,7 +258,6 @@ lint_file() {
 
   info "Running rustfmt on $_file"
   mkdir -p "$(dirname "$workdir/$_file")"
-
 
   if rustfmt < "$_file" > "$workdir/$_file" 2> "$workdir/rustfmt_errors"; then
     _rf_exit=0
