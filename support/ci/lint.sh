@@ -265,10 +265,12 @@ lint_file() {
   info "Running rustfmt on $_file"
   mkdir -p "$(dirname "$workdir/$_file")"
 
-  set +e
-  _rf_out="$(rustfmt < "$_file" > "$workdir/$_file")"
-  _rf_exit="$?"
-  set -e
+
+  if rustfmt < "$_file" > "$workdir/$_file" 2> "$workdir/rustfmt_errors"; then
+    _rf_exit=0
+  else
+    _rf_exit="$?"
+  fi
 
   case $_rf_exit in
     0|3)
@@ -279,16 +281,17 @@ lint_file() {
       # All other exit codes are errors
       warn "File $_file exited from rustfmt with $_rf_exit"
       warn "Error output:"
-      echo "$_rf_out"
+      cat "$workdir/rustfmt_errors"
       echo "$_file" >> "$failed"
       return 0
       ;;
   esac
 
-  set +e
-  _diff_out="$(diff --color=always --unified "$_file" "$workdir/$_file" 2>&1)"
-  _diff_exit="$?"
-  set -e
+  if diff --color=always --unified "$_file" "$workdir/$_file" > "$workdir/$_file".diff 2>&1; then
+     _diff_exit=0
+  else
+     _diff_exit="$?"
+  fi
 
   case $_diff_exit in
     0)
@@ -301,14 +304,14 @@ lint_file() {
       warn "File $_file generates a diff after running rustfmt"
       warn "Perhaps you forgot to run \`rustfmt' or \`cargo fmt'?"
       warn "Diff for $_file:"
-      echo "$_diff_out"
+      cat "$workdir/$_file".diff
       echo "$_file" >> "$failed"
       ;;
     *)
       # All other exit codes are errors, so we will report and track the file
       warn "Running diff on file $_file unexpectedly exited with $_diff_exit"
       warn "Error output:"
-      echo "$_diff_out"
+      cat "$workdir/$_file".diff
       echo "$_file" >> "$failed"
       ;;
   esac
