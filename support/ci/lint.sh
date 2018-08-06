@@ -79,12 +79,11 @@ parse_cli_args() {
     info "No explicit mode, attempting to auto detect..."
 
     need_cmd git
-    need_cmd wc
 
-    if [[ $(git diff --name-only | wc -l) -gt 0 ]]; then
+    if [[ $(git diff --name-only) ]]; then
       lint=unstaged
       info "Unstaged changes detected running in '$lint' lint mode"
-    elif [[ $(git diff --name-only --cached | wc -l) -gt 0 ]]; then
+    elif [[ $(git diff --name-only --cached) ]]; then
       lint=staged
       info "Staged changes detected, running in '$lint' lint mode"
     else
