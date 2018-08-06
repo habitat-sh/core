@@ -288,7 +288,8 @@ lint_file() {
       ;;
   esac
 
-  if diff --color=always --unified "$_file" "$workdir/$_file" > "$workdir/$_file".diff 2>&1; then
+  # the diff on Travis doesn't seem to support --color=always :|
+  if diff --unified "$_file" "$workdir/$_file" > "$workdir/$_file".diff 2>&1; then
      _diff_exit=0
   else
      _diff_exit="$?"
