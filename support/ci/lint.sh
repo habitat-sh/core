@@ -12,7 +12,7 @@ main() {
   need_cmd dirname
   need_cmd find
   need_cmd git
-  need_cmd realpath
+  # need_cmd realpath
   need_cmd rustfmt
 
   program="$(basename "$0")"
@@ -249,7 +249,13 @@ lint_file() {
     # Skip files which were deleted
     return 0
   fi
-  if [[ "$(realpath "$_file")" = */target/* ]]; then
+  if echo "$_file" | grep -q '/target/' > /dev/null; then
+    # Would rather do this:
+    #
+    #     if [[ "$(realpath "$_file")" = */target/* ]]; then
+    #
+    # but it doesn't look like realpath is in Travis, and there
+    # appears to be an issue installing it :/
     # Skip files in a `target/` directory
     return 0
   fi
