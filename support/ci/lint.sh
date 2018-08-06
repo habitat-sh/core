@@ -244,11 +244,16 @@ lint_file() {
   local _file="$1"
   local _rf_out _rf_exit _diff_out _diff_exit
 
+  need_cmd basename
+  need_cmd dirname
+  need_cmd realpath
+  need_cmd rustfmt
+
   if [[ ! -e "$_file" ]]; then
     # Skip files which were deleted
     return 0
   fi
-  if echo "$_file" | grep -q '/target/' > /dev/null; then
+  if [[ "$(realpath "$_file")" = */target/* ]]; then
     # Skip files in a `target/` directory
     return 0
   fi
@@ -256,9 +261,6 @@ lint_file() {
     # Skip files directly under a `generated/` directory
     return 0
   fi
-
-  need_cmd dirname
-  need_cmd rustfmt
 
   info "Running rustfmt on $_file"
   mkdir -p "$(dirname "$workdir/$_file")"
