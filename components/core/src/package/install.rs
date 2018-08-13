@@ -26,7 +26,7 @@ use toml;
 use toml::Value;
 
 use super::metadata::{parse_key_value, Bind, BindMapping, MetaFile, PackageType};
-use super::{Identifiable, PackageIdent, PackageTarget};
+use super::{PackageIdent, PackageTarget, Release, ReleaseIdent, Version};
 use error::{Error, Result};
 use fs;
 
@@ -139,13 +139,13 @@ impl PackageInstall {
         let original_ident = ident;
         // If the PackageIndent is does not have a version, use a reasonable minimum version that
         // will be satisfied by any installed package with the same origin/name
-        let ident = if None == ident.version {
-            PackageIdent::new(
-                ident.origin.clone(),
-                ident.name.clone(),
-                Some("0".into()),
-                Some("0".into()),
-            )
+        let ident = if None == ident.version() {
+            PackageIdent::Release(ReleaseIdent::new(
+                ident.origin().clone(),
+                ident.name().clone(),
+                Version::new("0")?,
+                Release::new("0")?,
+            ))
         } else {
             ident.clone()
         };
@@ -158,7 +158,7 @@ impl PackageInstall {
         let pl = Self::package_list(&package_root_path)?;
         let latest: Option<PackageIdent> = pl
             .iter()
-            .filter(|ref p| p.origin == ident.origin && p.name == ident.name)
+            .filter(|ref p| p.origin() == ident.origin() && p.name() == ident.name())
             .fold(None, |winner, b| match winner {
                 Some(a) => match a.cmp(&b) {
                     Ordering::Greater | Ordering::Equal => Some(a),
@@ -745,7 +745,7 @@ impl PackageInstall {
                     .into_owned()
                     .to_string();
                 let ident =
-                    PackageIdent::new(origin.clone(), name.clone(), Some(version), Some(release));
+                    PackageIdent::new(origin.clone(), name.clone(), Some(version), Some(release))?;
                 packages.push(ident)
             } else {
                 debug!(
@@ -813,6 +813,7 @@ mod test {
 
     use super::*;
     use package::test_support::fixture_path;
+    use package::{Release, ReleaseIdent, Version};
 
     /// Creates a minimal installed package under an fs_root and return a corresponding loaded
     /// `PackageInstall` suitable for testing against. The `IDENT` and `TARGET` metafiles are
@@ -824,20 +825,32 @@ mod test {
             f.write_all(content.as_bytes()).unwrap()
         }
 
-        let mut pkg_ident = PackageIdent::from_str(ident).unwrap();
-        if !pkg_ident.fully_qualified() {
-            if let None = pkg_ident.version {
-                pkg_ident.version = Some(String::from("1.0.0"));
-            }
-            if let None = pkg_ident.release {
-                pkg_ident.release = Some(
+        let pkg_ident = PackageIdent::from_str(ident).unwrap();
+        let pkg_ident = match pkg_ident {
+            PackageIdent::Version(i) => PackageIdent::Release(ReleaseIdent::new(
+                i.origin().clone(),
+                i.name().clone(),
+                i.version().clone(),
+                Release::new(
                     time::now_utc()
                         .strftime("%Y%m%d%H%M%S")
                         .unwrap()
                         .to_string(),
-                );
-            }
-        }
+                ).unwrap(),
+            )),
+            PackageIdent::Name(i) => PackageIdent::Release(ReleaseIdent::new(
+                i.origin().clone(),
+                i.name().clone(),
+                Version::new("1.0.0").unwrap(),
+                Release::new(
+                    time::now_utc()
+                        .strftime("%Y%m%d%H%M%S")
+                        .unwrap()
+                        .to_string(),
+                ).unwrap(),
+            )),
+            _ => pkg_ident,
+        };
         let pkg_install_path = fs::pkg_install_path(&pkg_ident, Some(fs_root));
 
         std::fs::create_dir_all(&pkg_install_path).unwrap();

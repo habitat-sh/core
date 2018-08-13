@@ -27,7 +27,7 @@ use libarchive;
 use regex;
 use toml;
 
-use package::{self, Identifiable};
+use package;
 
 pub type Result<T> = result::Result<T, Error>;
 
@@ -102,6 +102,12 @@ pub enum Error {
     InvalidPackageTarget(String),
     /// Occurs when a package type is not recognized.
     InvalidPackageType(String),
+    /// Occurs when a release ident string cannot be successfully parsed.
+    InvalidReleaseIdent(String),
+    /// Occurs when a version ident string cannot be successfully parsed.
+    InvalidVersionIdent(String),
+    /// Occurs when a name ident string cannot be successfully parsed.
+    InvalidNameIdent(String),
     /// Occurs when a service group string cannot be successfully parsed.
     InvalidServiceGroup(String),
     /// Occurs when an origin is in an invalid format
@@ -276,6 +282,21 @@ impl fmt::Display for Error {
                 e
             ),
             Error::InvalidPackageType(ref e) => format!("Invalid package type: {}.", e),
+            Error::InvalidReleaseIdent(ref s) => format!(
+                "Invalid release identifier: {:?}. A valid identifier is in the form \
+                 origin/name/version/release (example: acme/redis/1.2.3/20180810142701)",
+                s
+            ),
+            Error::InvalidVersionIdent(ref s) => format!(
+                "Invalid version identifier: {:?}. A valid identifier is in the form \
+                 origin/name/version (example: acme/redis/1.2.3)",
+                s
+            ),
+            Error::InvalidNameIdent(ref s) => format!(
+                "Invalid name identifier: {:?}. A valid identifier is in the form \
+                 origin/name (example: acme/redis)",
+                s
+            ),
             Error::InvalidServiceGroup(ref e) => format!(
                 "Invalid service group: {}. A valid service group string is in the form \
                  service.group (example: redis.production)",
@@ -430,6 +451,18 @@ impl error::Error for Error {
                 "Package targets must be in architecture-platform format (example: x86_64-linux)"
             }
             Error::InvalidPackageType(_) => "Unsupported package type supplied.",
+            Error::InvalidReleaseIdent(_) => {
+                "Release identifiers must be in origin/name/version/release format \
+                 (example: acme/redis/1.2.3/20180810142701)"
+            }
+            Error::InvalidVersionIdent(_) => {
+                "Version identifiers must be in origin/name/version format \
+                 (example: acme/redis/1.2.3)"
+            }
+            Error::InvalidNameIdent(_) => {
+                "Name identifiers must be in origin/name format \
+                 (example: acme/redis)"
+            }
             Error::InvalidServiceGroup(_) => {
                 "Service group strings must be in service.group[@organization] format (example: redis.production or foo.default@bazcorp)"
             }

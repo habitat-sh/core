@@ -20,7 +20,10 @@ pub mod plan;
 pub mod target;
 
 pub use self::archive::{FromArchive, PackageArchive};
-pub use self::ident::{Identifiable, PackageIdent};
+pub use self::ident::{
+    Ident as PackageIdent, Identifiable, Name, NameIdent, Origin, Release, ReleaseIdent, Version,
+    VersionIdent,
+};
 pub use self::install::PackageInstall;
 pub use self::plan::Plan;
 pub use self::target::PackageTarget;

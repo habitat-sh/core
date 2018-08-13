@@ -21,7 +21,7 @@ use users;
 
 use env as henv;
 use error::Result;
-use package::{Identifiable, PackageIdent, PackageInstall};
+use package::{PackageIdent, PackageInstall};
 
 /// The default root path of the Habitat filesystem
 pub const ROOT_PATH: &'static str = "hab";
@@ -189,10 +189,10 @@ where
         "Cannot determine install path without fully qualified ident"
     );
     let mut pkg_path = pkg_root_path(fs_root);
-    pkg_path.push(&ident.origin);
-    pkg_path.push(&ident.name);
-    pkg_path.push(ident.version.as_ref().unwrap());
-    pkg_path.push(ident.release.as_ref().unwrap());
+    pkg_path.push(&ident.origin());
+    pkg_path.push(&ident.name());
+    pkg_path.push(ident.version().as_ref().unwrap());
+    pkg_path.push(ident.release().as_ref().unwrap());
     pkg_path
 }
 

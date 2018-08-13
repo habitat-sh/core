@@ -24,7 +24,7 @@ use libarchive::writer;
 use regex::Regex;
 
 use super::metadata::{MetaFile, PackageType};
-use super::{Identifiable, PackageIdent, PackageTarget};
+use super::{PackageIdent, PackageTarget};
 use crypto::{artifact, hash};
 use error::{Error, Result};
 
@@ -447,10 +447,10 @@ mod test {
             fixtures().join("happyhumans-possums-8.1.4-20160427165340-x86_64-linux.hart"),
         );
         let ident = hart.ident().unwrap();
-        assert_eq!(ident.origin, "happyhumans");
-        assert_eq!(ident.name, "possums");
-        assert_eq!(ident.version, Some("8.1.4".to_string()));
-        assert_eq!(ident.release, Some("20160427165340".to_string()));
+        assert_eq!(ident.origin().as_str(), "happyhumans");
+        assert_eq!(ident.name().as_str(), "possums");
+        assert_eq!(ident.version().map(|v| v.as_str()), Some("8.1.4"));
+        assert_eq!(ident.release().map(|r| r.as_str()), Some("20160427165340"));
     }
 
     pub fn root() -> PathBuf {
