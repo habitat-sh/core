@@ -194,6 +194,18 @@ impl PackageInstall {
         }
     }
 
+    // hab-plan-build.sh only generates SVC_USER and SVC_GROUP files if it thinks a package is
+    // a service. It determines that by checking for the presence of a run hook file or a
+    // pkg_svc_run value. Therefore, if we can detect the presence of a SVC_USER file, we can
+    // consider this archive a service.
+    pub fn is_a_service(&self) -> bool {
+        match self.svc_user() {
+            Ok(None) => false,
+            Ok(_) => true,
+            _ => false,
+        }
+    }
+
     /// Determines whether or not this package has a runnable service.
     pub fn is_runnable(&self) -> bool {
         // Currently, a runnable package can be determined by checking if a `run` hook exists in
