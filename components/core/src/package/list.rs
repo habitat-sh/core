@@ -17,12 +17,10 @@ use std::fs::DirEntry;
 use std::path::Path;
 use std::str::FromStr;
 
+use super::install::INSTALL_TMP_PREFIX;
 use super::metadata::{read_metafile, MetaFile};
 use super::{PackageIdent, PackageTarget};
-
 use error::Result;
-
-pub const INSTALL_TMP_PREFIX: &'static str = ".hab-pkg-install";
 
 /// Returns a list of package structs built from the contents of the given directory.
 pub fn all_packages(path: &Path) -> Result<Vec<PackageIdent>> {

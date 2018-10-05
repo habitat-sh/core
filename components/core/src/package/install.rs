@@ -35,6 +35,8 @@ use super::PackageTarget;
 #[cfg(test)]
 use std;
 
+pub const INSTALL_TMP_PREFIX: &'static str = ".hab-pkg-install";
+
 pub const DEFAULT_CFG_FILE: &'static str = "default.toml";
 const PATH_KEY: &'static str = "PATH";
 
