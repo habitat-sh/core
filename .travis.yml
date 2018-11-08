@@ -20,7 +20,7 @@ matrix:
     - language: rust
       env:
         - COMPONENTS=lib
-      rust: 1.29.2
+      rust: 1.30.0
       sudo: required
       addons:
         apt:
