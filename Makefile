@@ -52,7 +52,7 @@ $(foreach component,$(ALL),$(eval $(call BUILD,$(component))))
 
 define UNIT
 unit-$1: ## executes the $1 component's unit test suite
-	cd components/$1 && cargo test
+	cd components/$1 && cargo test && cargo test --release
 .PHONY: unit-$1
 endef
 $(foreach component,$(ALL),$(eval $(call UNIT,$(component))))
