@@ -15,9 +15,9 @@
 use std::path::Path;
 use std::time::Duration;
 
-use hab_core::env;
-use hab_core::package::PackageTarget;
-use hab_core::util::sys;
+use habitat_core::env;
+use habitat_core::package::PackageTarget;
+use habitat_core::util::sys;
 use hyper::client::pool::{Config, Pool};
 use hyper::client::{Client as HyperClient, IntoUrl, RequestBuilder};
 use hyper::header::UserAgent;
@@ -30,10 +30,10 @@ use openssl::ssl::{
 };
 use url::Url;
 
-use error::{Error, Result};
-use net::ProxyHttpsConnector;
-use proxy::{proxy_unless_domain_exempted, ProxyInfo};
-use ssl;
+use crate::error::{Error, Result};
+use crate::net::ProxyHttpsConnector;
+use crate::proxy::{proxy_unless_domain_exempted, ProxyInfo};
+use crate::ssl;
 
 // Read and write TCP socket timeout for Hyper/HTTP client calls.
 const CLIENT_SOCKET_RW_TIMEOUT_SEC: u64 = 120;
@@ -83,7 +83,7 @@ impl ApiClient {
             inner: new_hyper_client(&endpoint, fs_root_path)?,
             proxy: proxy_unless_domain_exempted(Some(&endpoint))?,
             target_scheme: endpoint.scheme().to_string(),
-            endpoint: endpoint,
+            endpoint,
             user_agent_header: user_agent(product, version)?,
         })
     }
@@ -208,7 +208,7 @@ impl ApiClient {
             return url;
         }
 
-        if url.path().ends_with("/") || path.starts_with("/") {
+        if url.path().ends_with('/') || path.starts_with('/') {
             url.set_path(&format!("{}{}", self.endpoint.path(), path));
         } else {
             url.set_path(&format!("{}/{}", self.endpoint.path(), path));

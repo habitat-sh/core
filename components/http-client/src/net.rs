@@ -20,7 +20,7 @@ use hyper::method::Method;
 use hyper::net::{HttpConnector, HttpsStream, NetworkConnector, SslClient};
 use hyper::version::HttpVersion;
 
-use proxy::ProxyInfo;
+use crate::proxy::ProxyInfo;
 
 /// A connector that uses an HTTP proxy server (pass-through for plaintext and tunneled for SSL
 /// sessions).
@@ -33,11 +33,11 @@ pub struct ProxyHttpsConnector<S: SslClient> {
 impl<S: SslClient> ProxyHttpsConnector<S> {
     /// Creates a new connection using the provided proxy server configuration and SSL
     /// implementation.
-    pub fn new(proxy: ProxyInfo, ssl: S) -> hyper::Result<Self> {
+    pub fn new(proxy: ProxyInfo, ssl_client: S) -> hyper::Result<Self> {
         Ok(ProxyHttpsConnector {
-            proxy: proxy,
+            proxy,
             proxy_connector: HttpConnector,
-            ssl_client: ssl,
+            ssl_client,
         })
     }
 }

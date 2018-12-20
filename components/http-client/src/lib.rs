@@ -11,30 +11,23 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-#![cfg_attr(feature = "clippy", feature(plugin))]
-#![cfg_attr(feature = "clippy", plugin(clippy))]
 
-extern crate base64;
-extern crate habitat_core as hab_core;
-extern crate httparse;
+// Used for `header!` macro which cannot be correctly resolved as it is exported as `hyper::header`
+// which is also a module name.
 #[macro_use]
 extern crate hyper;
-extern crate hyper_openssl;
+// Convenience importing of `debug!`/`info!` macros for entire crate.
 #[macro_use]
 extern crate log;
-extern crate openssl;
-extern crate serde;
-extern crate serde_json;
-extern crate url;
 
-pub mod api_client;
-pub mod error;
-pub mod net;
+mod api_client;
+mod error;
+mod net;
 pub mod proxy;
 pub mod util;
 
-pub use api_client::ApiClient;
-pub use error::{Error, Result};
+pub use crate::api_client::ApiClient;
+pub use crate::error::{Error, Result};
 
 #[cfg(not(target_os = "macos"))]
 mod ssl {
@@ -43,12 +36,12 @@ mod ssl {
     use std::path::Path;
     use std::str::FromStr;
 
-    use hab_core::env;
-    use hab_core::fs::cache_ssl_path;
-    use hab_core::package::{PackageIdent, PackageInstall};
+    use habitat_core::env;
+    use habitat_core::fs::cache_ssl_path;
+    use habitat_core::package::{PackageIdent, PackageInstall};
     use openssl::ssl::SslContextBuilder;
 
-    use error::Result;
+    use crate::error::Result;
 
     const CACERTS_PKG_IDENT: &'static str = "core/cacerts";
     const CACERT_PEM: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cacert.pem"));
@@ -91,7 +84,7 @@ mod ssl {
 
     use openssl::ssl::SslContextBuilder;
 
-    use error::Result;
+    use crate::error::Result;
 
     pub fn set_ca(ctx: &mut SslContextBuilder, _fs_root_path: Option<&Path>) -> Result<()> {
         ctx.set_default_verify_paths()?;
