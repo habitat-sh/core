@@ -41,7 +41,7 @@ use serde::ser::SerializeMap;
 use serde::{Serialize, Serializer};
 use serde_json;
 
-use PROGRAM_NAME;
+use crate::PROGRAM_NAME;
 
 static mut VERBOSE: AtomicBool = ATOMIC_BOOL_INIT;
 // I am sorry this isn't named the other way; I can't get an atomic initializer that defaults to
@@ -164,7 +164,7 @@ impl<'a> Serialize for StructuredOutput<'a> {
 // essentially create a flag we check to see what output you want, then call a different formatting
 // function. Viola!
 impl<'a> fmt::Display for StructuredOutput<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.json.unwrap_or(is_json()) {
             // Our JSON serialization handles verbosity itself, and
             // color is ignored anyway, so there's no reason to check
@@ -300,7 +300,7 @@ mod tests {
     use ansi_term::Colour::{Cyan, White};
     use serde_json;
 
-    use PROGRAM_NAME;
+    use crate::PROGRAM_NAME;
 
     static LOGKEY: &'static str = "SOT";
 
@@ -350,7 +350,7 @@ mod tests {
 
         assert_eq!(
             actual,
-            json!({
+            serde_json::json!({
                 "preamble": "monkeys",
                 "logkey": LOGKEY,
                 "content": "I love monkeys"
@@ -369,7 +369,7 @@ mod tests {
 
         assert_eq!(
             actual,
-            json!({
+            serde_json::json!({
                 "preamble": "monkeys",
                 "logkey": LOGKEY,
                 "line": 1,
@@ -391,7 +391,7 @@ mod tests {
 
         assert_eq!(
             actual,
-            json!({
+            serde_json::json!({
                 "preamble": "monkeys",
                 "logkey": LOGKEY,
                 "content": "I love drab monkeys"

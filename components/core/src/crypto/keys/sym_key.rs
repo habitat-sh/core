@@ -27,12 +27,12 @@ use super::{
     get_key_revisions, mk_key_filename, mk_revision_string, parse_name_with_rev, read_key_bytes,
     write_keypair_files, KeyPair, KeyType, PairType, TmpKeyfile,
 };
-use error::{Error, Result};
+use crate::error::{Error, Result};
 
 pub type SymKey = KeyPair<(), SymSecretKey>;
 
 impl fmt::Debug for SymKey {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "SymKey")
     }
 }

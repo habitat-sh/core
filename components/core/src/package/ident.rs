@@ -20,10 +20,10 @@ use std::str::FromStr;
 
 use regex::Regex;
 
-use error::{Error, Result};
-use package::PackageTarget;
+use crate::error::{Error, Result};
+use crate::package::PackageTarget;
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref ORIGIN_NAME_RE: Regex =
         Regex::new(r"\A[a-z0-9][a-z0-9_-]*\z").expect("Unable to compile regex");
 }
@@ -130,7 +130,7 @@ impl PackageIdent {
     /// assert_eq!(it.next(), Some("myapp"));
     /// assert_eq!(it.next(), None);
     /// ```
-    pub fn iter(&self) -> Iter {
+    pub fn iter(&self) -> Iter<'_> {
         Iter {
             ident: self,
             pos: 0,
@@ -203,7 +203,7 @@ impl Default for PackageIdent {
 }
 
 impl fmt::Display for PackageIdent {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.version.is_some() && self.release.is_some() {
             write!(
                 f,

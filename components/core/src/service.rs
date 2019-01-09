@@ -22,9 +22,9 @@ use std::time::Duration;
 
 use regex::Regex;
 
-use error::{Error, Result};
+use crate::error::{Error, Result};
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref SG_FROM_STR_RE: Regex =
         Regex::new(r"\A((?P<application_environment>[^#@]+)#)?(?P<service>[^#@.]+)\.(?P<group>[^#@.]+)(@(?P<organization>[^#@.]+))?\z").unwrap();
 
@@ -61,7 +61,7 @@ impl Default for BindingMode {
 }
 
 impl fmt::Display for BindingMode {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let value = match *self {
             BindingMode::Relaxed => "relaxed",
             BindingMode::Strict => "strict",
@@ -213,7 +213,7 @@ impl DerefMut for ServiceGroup {
 }
 
 impl fmt::Display for ServiceGroup {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }
@@ -326,7 +326,7 @@ impl DerefMut for ApplicationEnvironment {
 }
 
 impl fmt::Display for ApplicationEnvironment {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }
@@ -364,7 +364,7 @@ impl AsRef<Duration> for HealthCheckInterval {
 }
 
 impl fmt::Display for HealthCheckInterval {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({}s)", self.0.as_secs())
     }
 }

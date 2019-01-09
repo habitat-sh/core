@@ -23,8 +23,8 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::vec::IntoIter;
 
-use error::{Error, Result};
-use package::PackageIdent;
+use crate::error::{Error, Result};
+use crate::package::PackageIdent;
 
 #[cfg(not(windows))]
 const ENV_PATH_SEPARATOR: char = ':';
@@ -67,7 +67,7 @@ impl FromStr for Bind {
 }
 
 impl fmt::Display for Bind {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let formatted_exports = self.exports.join(" ");
         write!(f, "[{}]={}", self.service, formatted_exports)
     }
@@ -195,7 +195,7 @@ pub enum MetaFile {
 }
 
 impl fmt::Display for MetaFile {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let id = match *self {
             MetaFile::BindMap => "BIND_MAP",
             MetaFile::Binds => "BINDS",
@@ -262,7 +262,7 @@ pub enum PackageType {
 }
 
 impl fmt::Display for PackageType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let id = match *self {
             PackageType::Standalone => "Standalone",
             PackageType::Composite => "Composite",

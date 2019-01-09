@@ -17,13 +17,13 @@
 use std::collections::VecDeque;
 use std::sync::{Mutex, Once, ONCE_INIT};
 
-use os::process::{OsSignal, Signal, SignalCode};
+use crate::os::process::{OsSignal, Signal, SignalCode};
 
 use super::SignalEvent;
 
 static INIT: Once = ONCE_INIT;
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref CAUGHT_SIGNALS: Mutex<VecDeque<SignalCode>> = Mutex::new(VecDeque::new());
 }
 

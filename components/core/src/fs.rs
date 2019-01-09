@@ -18,11 +18,11 @@ use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
-use users;
+use crate::users;
 
-use env as henv;
-use error::Result;
-use package::{Identifiable, PackageIdent, PackageInstall};
+use crate::env as henv;
+use crate::error::Result;
+use crate::package::{Identifiable, PackageIdent, PackageInstall};
 
 /// The default root path of the Habitat filesystem
 pub const ROOT_PATH: &'static str = "hab";
@@ -54,7 +54,7 @@ pub const SYSTEMDRIVE_ENVVAR: &'static str = "SYSTEMDRIVE";
 /// The file where user-defined configuration for each service is found.
 pub const USER_CONFIG_FILE: &'static str = "user.toml";
 
-lazy_static! {
+lazy_static::lazy_static! {
     /// The default filesystem root path.
     ///
     /// WARNING: On Windows this variable mutates on first call if an environment variable with

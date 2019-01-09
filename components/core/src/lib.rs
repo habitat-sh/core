@@ -15,43 +15,15 @@
 #![cfg_attr(feature = "clippy", feature(plugin))]
 #![cfg_attr(feature = "clippy", plugin(clippy))]
 
-extern crate ansi_term;
-extern crate base64;
 extern crate crypto as rust_crypto;
 #[cfg(windows)]
 extern crate ctrlc;
-extern crate dirs;
-extern crate errno;
-extern crate hex;
-#[cfg(test)]
-extern crate hyper;
-#[macro_use]
-extern crate lazy_static;
-extern crate libarchive;
-extern crate libc;
-extern crate libsodium_sys;
+
 #[macro_use]
 extern crate log;
-extern crate rand;
-extern crate regex;
-extern crate serde;
-extern crate tempfile;
+
 #[macro_use]
 extern crate serde_derive;
-
-// This is a little gross, but we only need the macros in tests right
-// now.
-#[cfg(test)]
-#[macro_use]
-extern crate serde_json;
-#[cfg(not(test))]
-extern crate serde_json;
-
-extern crate sodiumoxide;
-extern crate time;
-extern crate toml;
-extern crate typemap;
-extern crate url as extern_url;
 
 #[cfg(not(windows))]
 extern crate users as linux_users;
@@ -84,12 +56,12 @@ pub mod util;
 
 use std::path::PathBuf;
 
-pub use os::filesystem;
-pub use os::users;
+pub use crate::os::filesystem;
+pub use crate::os::users;
 
 pub const AUTH_TOKEN_ENVVAR: &'static str = "HAB_AUTH_TOKEN";
 
-lazy_static! {
+lazy_static::lazy_static! {
     pub static ref PROGRAM_NAME: String = {
         let arg0 = std::env::args().next().map(|p| PathBuf::from(p));
         arg0.as_ref()

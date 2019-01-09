@@ -27,8 +27,8 @@ use toml::Value;
 use super::list::package_list_for_ident;
 use super::metadata::{parse_key_value, read_metafile, Bind, BindMapping, MetaFile, PackageType};
 use super::{Identifiable, PackageIdent};
-use error::{Error, Result};
-use fs;
+use crate::error::{Error, Result};
+use crate::fs;
 
 #[cfg(test)]
 use super::PackageTarget;
@@ -653,7 +653,7 @@ impl PackageInstall {
 }
 
 impl fmt::Display for PackageInstall {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.ident)
     }
 }
@@ -667,7 +667,7 @@ mod test {
     use toml;
 
     use super::*;
-    use package::test_support::{fixture_path, testing_package_install};
+    use crate::package::test_support::{fixture_path, testing_package_install};
 
     /// Write the given contents into the specified metadata file for
     /// the package.

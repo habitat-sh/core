@@ -85,8 +85,8 @@ use std::str::FromStr;
 use regex::Regex;
 use serde;
 
-use error::Error;
-use util;
+use crate::error::Error;
+use crate::util;
 
 macro_rules! supported_package_targets {
     (
@@ -308,7 +308,7 @@ supported_package_targets! {
     ("x86_64-windows", X86_64_Windows, X86_64_WINDOWS, "x86_64", "windows");
 }
 
-lazy_static! {
+lazy_static::lazy_static! {
     /// A compiled regular expression that can parse the internal components of a `Type`.
     static ref TYPE_FROM_STR_RE: Regex = Regex::new(
         r"\A(?P<architecture>[a-z0-9_]+)-(?P<system>[a-z0-9_]+)(-(?P<variant>[a-z0-9_]+))?\z"
@@ -363,7 +363,7 @@ impl PackageTarget {
     /// assert_eq!(it.next(), Some("linux"));
     /// assert_eq!(it.next(), None);
     /// ```
-    pub fn iter(&self) -> Iter {
+    pub fn iter(&self) -> Iter<'_> {
         Iter {
             target: self,
             pos: 0,
@@ -414,7 +414,7 @@ impl PackageTarget {
 }
 
 impl fmt::Display for PackageTarget {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0.as_str())
     }
 }

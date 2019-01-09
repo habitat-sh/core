@@ -26,7 +26,7 @@ use base64;
 use regex::Regex;
 use time;
 
-use error::{Error, Result};
+use crate::error::{Error, Result};
 
 use super::{
     PUBLIC_BOX_KEY_VERSION, PUBLIC_KEY_SUFFIX, PUBLIC_SIG_KEY_VERSION, SECRET_BOX_KEY_SUFFIX,
@@ -34,7 +34,7 @@ use super::{
     SECRET_SYM_KEY_VERSION,
 };
 
-lazy_static! {
+lazy_static::lazy_static! {
     static ref NAME_WITH_REV_RE: Regex = Regex::new(r"\A(?P<name>.+)-(?P<rev>\d{14})\z").unwrap();
     static ref KEYFILE_RE: Regex =
         Regex::new(r"\A(?P<name>.+)-(?P<rev>\d{14})\.(?P<suffix>[a-z]+(\.[a-z]+)?)\z").unwrap();
@@ -51,7 +51,7 @@ enum KeyType {
 }
 
 impl fmt::Display for KeyType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             KeyType::Box => write!(f, "box"),
             KeyType::Sig => write!(f, "sig"),
@@ -67,7 +67,7 @@ pub enum PairType {
 }
 
 impl fmt::Display for PairType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             PairType::Public => write!(f, "public"),
             PairType::Secret => write!(f, "secret"),
@@ -571,7 +571,7 @@ fn write_keypair_files(
 
 #[cfg(not(windows))]
 fn set_permissions<T: AsRef<Path>>(path: T) -> Result<()> {
-    use util::posix_perm;
+    use crate::util::posix_perm;
 
     use super::KEY_PERMISSIONS;
 
@@ -580,7 +580,7 @@ fn set_permissions<T: AsRef<Path>>(path: T) -> Result<()> {
 
 #[cfg(windows)]
 fn set_permissions<T: AsRef<Path>>(path: T) -> Result<()> {
-    use util::win_perm;
+    use crate::util::win_perm;
 
     win_perm::harden_path(path.as_ref())
 }
