@@ -349,6 +349,66 @@ impl<'a> SvcDir<'a> {
         Ok(())
     }
 
+    /// Remove all templated content (hooks and configuration) from a
+    /// service directory.
+    ///
+    /// Useful for removing rendered files that may be from older
+    /// versions of a service that have been removed from the current
+    /// version.
+    pub fn purge_templated_content(&self) -> Result<()> {
+        for dir_path in &[
+            svc_config_path(&self.service_name),
+            svc_hooks_path(&self.service_name),
+        ] {
+            debug!(
+                "Purging any old templated content from {}",
+                dir_path.display()
+            );
+            Self::purge_directory_content(dir_path)?;
+        }
+        Ok(())
+    }
+
+    /// Utility function that removes all files in `root`.
+    ///
+    /// Currently does not recursively descend into any directories in
+    /// `root`.
+    fn purge_directory_content<P>(root: P) -> Result<()>
+    where
+        P: AsRef<Path>,
+    {
+        for entry in stdfs::read_dir(root.as_ref())? {
+            let entry = entry?;
+            if let Ok(file_type) = entry.file_type() {
+                if file_type.is_file() {
+                    debug!("Purging {:?}", entry.path().display());
+                    stdfs::remove_file(entry.path())?;
+                } else if file_type.is_dir() {
+                    // This is unexpected; we shouldn't have
+                    // subdirectories down here.
+                    //
+                    // But see
+                    // https://github.com/habitat-sh/habitat/issues/5173
+                    // for a future when we will need to traverse the
+                    // directory structure.
+                    warn!(
+                        "Not purging {:?}; it is a directory",
+                        entry.path().display()
+                    );
+                } else if file_type.is_symlink() {
+                    // This is also unexpected.
+                    warn!("Not purging {:?}; it is a symlink", entry.path().display());
+                }
+            } else {
+                warn!(
+                    "Not purging {:?}; could not determine file type",
+                    entry.path().display()
+                );
+            }
+        }
+        Ok(())
+    }
+
     fn create_svc_root(&self) -> Result<()> {
         Self::create_dir_all(svc_path(&self.service_name))
     }
@@ -651,6 +711,120 @@ fn fs_root_path() -> PathBuf {
         }
     } else {
         PathBuf::from("/")
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod svc_dir {
+        use super::*;
+        use std::fs::{self, File};
+        use std::path::Path;
+        use tempfile::tempdir;
+
+        fn create_file<P>(path: P)
+        where
+            P: AsRef<Path>,
+        {
+            let path = path.as_ref();
+            File::create(path).expect("Couldn't create file");
+        }
+
+        fn create_dir<P>(dir: P)
+        where
+            P: AsRef<Path>,
+        {
+            let dir = dir.as_ref();
+            fs::create_dir(dir).expect("Couldn't create directory");
+        }
+
+        fn assert_file_exists<P>(path: P)
+        where
+            P: AsRef<Path>,
+        {
+            let path = path.as_ref();
+            assert!(path.exists(), "File should exist: {:?}", path);
+            assert!(
+                fs::metadata(&path).unwrap().file_type().is_file(),
+                "Should be a file: {:?}",
+                path
+            );
+        }
+
+        fn assert_file_does_not_exist<P>(path: P)
+        where
+            P: AsRef<Path>,
+        {
+            let path = path.as_ref();
+            assert!(!path.exists(), "File should NOT exist: {:?}", path);
+        }
+
+        fn assert_directory_exists<P>(path: P)
+        where
+            P: AsRef<Path>,
+        {
+            let path = path.as_ref();
+            assert!(path.exists(), "Directory should exist: {:?}", path);
+            assert!(
+                fs::metadata(&path).unwrap().file_type().is_dir(),
+                "Should be a directory: {:?}",
+                path
+            );
+        }
+
+        #[test]
+        fn directory_purge_removes_only_files() {
+            let root = tempdir().expect("couldn't create tempdir");
+
+            let file_1 = root.path().join("file_1");
+            create_file(&file_1);
+
+            let file_2 = root.path().join("file_2");
+            create_file(&file_2);
+
+            let sub_dir = root.path().join("test_dir");
+            create_dir(&sub_dir);
+
+            assert_directory_exists(&root);
+            assert_file_exists(&file_1);
+            assert_file_exists(&file_2);
+            assert_directory_exists(&sub_dir);
+
+            SvcDir::purge_directory_content(&root).expect("Couldn't purge!");
+
+            assert_directory_exists(&root);
+            assert_file_does_not_exist(&file_1);
+            assert_file_does_not_exist(&file_2);
+            assert_directory_exists(&sub_dir);
+        }
+
+        #[test]
+        fn directory_purge_is_not_recursive() {
+            let root = tempdir().expect("couldn't create tempdir");
+
+            let sub_dir = root.path().join("test_dir");
+            create_dir(&sub_dir);
+
+            let sub_file_1 = sub_dir.join("sub_file_1");
+            create_file(&sub_file_1);
+
+            let sub_file_2 = sub_dir.join("sub_file_2");
+            create_file(&sub_file_2);
+
+            assert_directory_exists(&root);
+            assert_directory_exists(&sub_dir);
+            assert_file_exists(&sub_file_1);
+            assert_file_exists(&sub_file_2);
+
+            SvcDir::purge_directory_content(&root).expect("Couldn't purge!");
+
+            assert_directory_exists(&root);
+            assert_directory_exists(&sub_dir);
+            assert_file_exists(&sub_file_1);
+            assert_file_exists(&sub_file_2);
+        }
     }
 }
 
