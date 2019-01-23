@@ -61,7 +61,6 @@ $(foreach component,$(ALL),$(eval $(call UNIT,$(component))))
 UNEXAMINED_LINTS = clippy::cyclomatic_complexity \
 				   clippy::large_enum_variant \
 				   clippy::len_without_is_empty \
-				   clippy::len_zero \
 				   clippy::let_and_return \
 				   clippy::let_unit_value \
 				   clippy::map_clone \
@@ -129,6 +128,8 @@ DENIED_LINTS = clippy::assign_op_pattern \
 			   clippy::get_unwrap \
 			   clippy::identity_conversion \
 			   clippy::if_let_some_result \
+			   clippy::len_zero \
+
 
 
 define LINT
