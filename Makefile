@@ -58,8 +58,7 @@ endef
 $(foreach component,$(ALL),$(eval $(call UNIT,$(component))))
 
 # Lints we need to work through and decide as a team whether to allow or fix
-UNEXAMINED_LINTS = clippy::const_static_lifetime \
-				   clippy::cyclomatic_complexity \
+UNEXAMINED_LINTS = clippy::cyclomatic_complexity \
 				   clippy::deref_addrof \
 				   clippy::expect_fun_call \
 				   clippy::for_kv_map \
@@ -128,6 +127,7 @@ DENIED_LINTS = clippy::assign_op_pattern \
 			   clippy::clone_on_copy \
 			   clippy::cmp_owned \
 			   clippy::collapsible_if \
+			   clippy::const_static_lifetime \
 			   clippy::correctness \
 
 define LINT
