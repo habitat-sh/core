@@ -58,8 +58,7 @@ endef
 $(foreach component,$(ALL),$(eval $(call UNIT,$(component))))
 
 # Lints we need to work through and decide as a team whether to allow or fix
-UNEXAMINED_LINTS = clippy::bool_comparison \
-				   clippy::cast_lossless \
+UNEXAMINED_LINTS = clippy::cast_lossless \
 				   clippy::clone_on_copy \
 				   clippy::cmp_owned \
 				   clippy::collapsible_if \
@@ -128,6 +127,7 @@ LINTS_TO_FIX =
 DENIED_LINTS = clippy::assign_op_pattern \
 			   clippy::blacklisted_name \
 			   clippy::block_in_if_condition_stmt \
+			   clippy::bool_comparison \
 			   clippy::correctness \
 
 define LINT
