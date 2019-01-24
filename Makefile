@@ -67,7 +67,6 @@ UNEXAMINED_LINTS = clippy::cyclomatic_complexity \
 				   clippy::new_ret_no_self \
 				   clippy::new_without_default \
 				   clippy::new_without_default_derive \
-				   clippy::println_empty_string \
 				   clippy::ptr_arg \
 				   clippy::question_mark \
 				   clippy::redundant_closure \
@@ -129,6 +128,7 @@ DENIED_LINTS = clippy::assign_op_pattern \
 			   clippy::op_ref \
 			   clippy::option_map_unit_fn \
 			   clippy::or_fun_call \
+			   clippy::println_empty_string \
 
 
 
