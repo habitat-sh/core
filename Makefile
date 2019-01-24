@@ -63,7 +63,6 @@ UNEXAMINED_LINTS = clippy::cyclomatic_complexity \
 				   clippy::len_without_is_empty \
 				   clippy::module_inception \
 				   clippy::needless_pass_by_value \
-				   clippy::needless_range_loop \
 				   clippy::needless_return \
 				   clippy::new_ret_no_self \
 				   clippy::new_without_default \
@@ -129,6 +128,7 @@ DENIED_LINTS = clippy::assign_op_pattern \
 			   clippy::match_ref_pats \
 			   clippy::needless_bool \
 			   clippy::needless_collect \
+			   clippy::needless_range_loop \
 
 
 
