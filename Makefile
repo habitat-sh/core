@@ -71,7 +71,6 @@ UNEXAMINED_LINTS = clippy::cyclomatic_complexity \
 				   clippy::redundant_field_names \
 				   clippy::too_many_arguments \
 				   clippy::trivially_copy_pass_by_ref \
-				   clippy::unnecessary_operation \
 				   clippy::unreadable_literal \
 				   clippy::unused_label \
 				   clippy::unused_unit \
@@ -129,6 +128,7 @@ DENIED_LINTS = clippy::assign_op_pattern \
 			   clippy::string_lit_as_bytes \
 			   clippy::toplevel_ref_arg \
 			   clippy::unit_arg \
+			   clippy::unnecessary_operation \
 
 
 
