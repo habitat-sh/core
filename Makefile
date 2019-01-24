@@ -69,7 +69,6 @@ UNEXAMINED_LINTS = clippy::cyclomatic_complexity \
 				   clippy::new_without_default_derive \
 				   clippy::question_mark \
 				   clippy::redundant_field_names \
-				   clippy::single_char_pattern \
 				   clippy::single_match \
 				   clippy::string_lit_as_bytes \
 				   clippy::too_many_arguments \
@@ -129,6 +128,7 @@ DENIED_LINTS = clippy::assign_op_pattern \
 			   clippy::ptr_arg \
 			   clippy::redundant_closure \
 			   clippy::redundant_pattern_matching \
+			   clippy::single_char_pattern \
 
 
 
