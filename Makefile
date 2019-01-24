@@ -71,7 +71,6 @@ UNEXAMINED_LINTS = clippy::cyclomatic_complexity \
 				   clippy::redundant_field_names \
 				   clippy::too_many_arguments \
 				   clippy::trivially_copy_pass_by_ref \
-				   clippy::useless_format \
 				   clippy::useless_let_if_seq \
 				   clippy::useless_vec \
 				   clippy::write_with_newline \
@@ -129,6 +128,7 @@ DENIED_LINTS = clippy::assign_op_pattern \
 			   clippy::unused_label \
 			   clippy::unused_unit \
 			   clippy::useless_asref \
+			   clippy::useless_format \
 
 
 
