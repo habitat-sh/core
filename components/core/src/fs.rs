@@ -25,34 +25,34 @@ use crate::os::users::{self, assert_pkg_user_and_group};
 use crate::package::{Identifiable, PackageIdent, PackageInstall};
 
 /// The default root path of the Habitat filesystem
-pub const ROOT_PATH: &'static str = "hab";
+pub const ROOT_PATH: &str = "hab";
 /// The default path for any analytics related files
-pub const CACHE_ANALYTICS_PATH: &'static str = "hab/cache/analytics";
+pub const CACHE_ANALYTICS_PATH: &str = "hab/cache/analytics";
 /// The default download root path for package artifacts, used on package installation
-pub const CACHE_ARTIFACT_PATH: &'static str = "hab/cache/artifacts";
+pub const CACHE_ARTIFACT_PATH: &str = "hab/cache/artifacts";
 /// The default path where cryptographic keys are stored
-pub const CACHE_KEY_PATH: &'static str = "hab/cache/keys";
+pub const CACHE_KEY_PATH: &str = "hab/cache/keys";
 /// The default path where source artifacts are downloaded, extracted, & compiled
-pub const CACHE_SRC_PATH: &'static str = "hab/cache/src";
+pub const CACHE_SRC_PATH: &str = "hab/cache/src";
 /// The default path where SSL-related artifacts are placed
-pub const CACHE_SSL_PATH: &'static str = "hab/cache/ssl";
+pub const CACHE_SSL_PATH: &str = "hab/cache/ssl";
 /// The root path for the launcher runtime
-pub const LAUNCHER_ROOT_PATH: &'static str = "hab/launcher";
+pub const LAUNCHER_ROOT_PATH: &str = "hab/launcher";
 /// The root path containing all locally installed packages
 /// Because this value is used in template rendering, we
 /// use native directory separator
 #[cfg(not(target_os = "windows"))]
-pub const PKG_PATH: &'static str = "hab/pkgs";
+pub const PKG_PATH: &str = "hab/pkgs";
 #[cfg(target_os = "windows")]
-pub const PKG_PATH: &'static str = "hab\\pkgs";
+pub const PKG_PATH: &str = "hab\\pkgs";
 /// The environment variable pointing to the filesystem root. This exists for internal
 /// Habitat team usage and is not intended to be used by Habitat consumers.
 /// Using this variable could lead to broken Supervisor services and it should
 /// be used with extreme caution.
-pub const FS_ROOT_ENVVAR: &'static str = "FS_ROOT";
-pub const SYSTEMDRIVE_ENVVAR: &'static str = "SYSTEMDRIVE";
+pub const FS_ROOT_ENVVAR: &str = "FS_ROOT";
+pub const SYSTEMDRIVE_ENVVAR: &str = "SYSTEMDRIVE";
 /// The file where user-defined configuration for each service is found.
-pub const USER_CONFIG_FILE: &'static str = "user.toml";
+pub const USER_CONFIG_FILE: &str = "user.toml";
 /// Permissions that service-owned service directories should
 /// have. The user and group will be `SVC_USER` / `SVC_GROUP`.
 #[cfg(not(windows))]
@@ -488,11 +488,8 @@ where
                 let candidate = PathBuf::from(&path).join(command.as_ref());
                 if candidate.is_file() {
                     return Some(candidate);
-                } else {
-                    match find_command_with_pathext(&candidate) {
-                        Some(result) => return Some(result),
-                        None => {}
-                    }
+                } else if let Some(result) = find_command_with_pathext(&candidate) {
+                    return Some(result);
                 }
             }
             None
@@ -518,18 +515,14 @@ where
     U: AsRef<Path>,
 {
     for path in pkg_install.paths()? {
-        let stripped = path.strip_prefix("/").expect(&format!(
-            "Package path missing / prefix {}",
-            path.to_string_lossy()
-        ));
+        let stripped = path
+            .strip_prefix("/")
+            .unwrap_or_else(|_| panic!("Package path missing / prefix {}", path.to_string_lossy()));
         let candidate = fs_root_path.as_ref().join(stripped).join(command.as_ref());
         if candidate.is_file() {
             return Ok(Some(path.join(command.as_ref())));
-        } else {
-            match find_command_with_pathext(&candidate) {
-                Some(result) => return Ok(Some(result)),
-                None => {}
-            }
+        } else if let Some(result) = find_command_with_pathext(&candidate) {
+            return Ok(Some(result));
         }
     }
     Ok(None)
@@ -583,19 +576,16 @@ pub fn resolve_cmd_in_pkg(program: &str, ident_str: &str) -> PathBuf {
 // We should only search with PATHEXT if the file does not already have an extension.
 fn find_command_with_pathext(candidate: &PathBuf) -> Option<PathBuf> {
     if candidate.extension().is_none() {
-        match henv::var_os("PATHEXT") {
-            Some(pathexts) => {
-                for pathext in env::split_paths(&pathexts) {
-                    let mut source_candidate = candidate.to_path_buf();
-                    let extension = pathext.to_str().unwrap().trim_matches('.');
-                    source_candidate.set_extension(extension);
-                    let current_candidate = source_candidate.to_path_buf();
-                    if current_candidate.is_file() {
-                        return Some(current_candidate);
-                    }
+        if let Some(pathexts) = henv::var_os("PATHEXT") {
+            for pathext in env::split_paths(&pathexts) {
+                let mut source_candidate = candidate.to_path_buf();
+                let extension = pathext.to_str().unwrap().trim_matches('.');
+                source_candidate.set_extension(extension);
+                let current_candidate = source_candidate.to_path_buf();
+                if current_candidate.is_file() {
+                    return Some(current_candidate);
                 }
             }
-            None => {}
         };
     }
     None

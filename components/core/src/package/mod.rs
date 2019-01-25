@@ -39,11 +39,10 @@ pub mod test_support {
     use time;
 
     pub fn fixture_path(name: &str) -> PathBuf {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("tests")
             .join("fixtures")
-            .join(name);
-        path
+            .join(name)
     }
 
     /// Creates a minimal installed package under an fs_root and return a corresponding loaded
@@ -58,10 +57,10 @@ pub mod test_support {
 
         let mut pkg_ident = PackageIdent::from_str(ident).unwrap();
         if !pkg_ident.fully_qualified() {
-            if let None = pkg_ident.version {
+            if pkg_ident.version.is_none() {
                 pkg_ident.version = Some(String::from("1.0.0"));
             }
-            if let None = pkg_ident.release {
+            if pkg_ident.release.is_none() {
                 pkg_ident.release = Some(
                     time::now_utc()
                         .strftime("%Y%m%d%H%M%S")
@@ -83,6 +82,6 @@ pub mod test_support {
         );
 
         PackageInstall::load(&pkg_ident, Some(fs_root))
-            .expect(&format!("PackageInstall should load for {}", &pkg_ident))
+            .unwrap_or_else(|_| panic!("PackageInstall should load for {}", &pkg_ident))
     }
 }

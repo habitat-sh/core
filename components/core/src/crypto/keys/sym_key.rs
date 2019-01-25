@@ -71,28 +71,24 @@ impl SymKey {
         cache_key_path: &P,
     ) -> Result<Self> {
         let (name, rev) = parse_name_with_rev(&name_with_rev)?;
-        let pk = match Self::get_public_key(name_with_rev, cache_key_path.as_ref()) {
-            Ok(k) => Some(k),
-            Err(e) => {
-                // Not an error, just continue
+        let pk = Self::get_public_key(name_with_rev, cache_key_path.as_ref())
+            .map_err(|e| {
                 debug!(
                     "Can't find public key for name_with_rev {}: {}",
                     name_with_rev, e
                 );
-                None
-            }
-        };
-        let sk = match Self::get_secret_key(name_with_rev, cache_key_path.as_ref()) {
-            Ok(k) => Some(k),
-            Err(e) => {
-                // Not an error, just continue
+                e
+            })
+            .ok();
+        let sk = Self::get_secret_key(name_with_rev, cache_key_path.as_ref())
+            .map_err(|e| {
                 debug!(
                     "Can't find secret key for name_with_rev {}: {}",
                     name_with_rev, e
                 );
-                None
-            }
-        };
+                e
+            })
+            .ok();
         if pk == None && sk == None {
             let msg = format!(
                 "No public or secret keys found for name_with_rev {}",
@@ -337,7 +333,7 @@ impl SymKey {
         cache_key_path: &P,
     ) -> Result<(Self, PairType)> {
         let mut lines = content.lines();
-        let _ = match lines.next() {
+        match lines.next() {
             Some(val) => {
                 if val != SECRET_SYM_KEY_VERSION {
                     return Err(Error::CryptoError(format!(
@@ -345,7 +341,6 @@ impl SymKey {
                         val
                     )));
                 }
-                ()
             }
             None => {
                 let msg = format!(
@@ -499,7 +494,7 @@ mod test {
         let pairs = SymKey::get_pairs_for("beyonce", cache.path()).unwrap();
         assert_eq!(pairs.len(), 1);
 
-        let _ = match wait_until_ok(|| {
+        match wait_until_ok(|| {
             let rpair = SymKey::generate_pair_for_ring("beyonce")?;
             rpair.to_pair_files(cache.path())?;
             Ok(())
@@ -620,7 +615,7 @@ mod test {
         let pair = SymKey::generate_pair_for_ring("beyonce").unwrap();
         pair.to_pair_files(cache.path()).unwrap();
 
-        let (nonce, ciphertext) = pair.encrypt("Ringonit".as_bytes()).unwrap();
+        let (nonce, ciphertext) = pair.encrypt(b"Ringonit").unwrap();
         let message = pair.decrypt(&nonce, &ciphertext).unwrap();
         assert_eq!(message, "Ringonit".to_string().into_bytes());
     }
@@ -630,7 +625,7 @@ mod test {
     fn encrypt_missing_secret_key() {
         let pair = SymKey::new("grohl".to_string(), "201604051449".to_string(), None, None);
 
-        pair.encrypt("Not going to go well".as_bytes()).unwrap();
+        pair.encrypt(b"Not going to go well").unwrap();
     }
 
     #[test]
@@ -639,7 +634,7 @@ mod test {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let pair = SymKey::generate_pair_for_ring("beyonce").unwrap();
         pair.to_pair_files(cache.path()).unwrap();
-        let (nonce, ciphertext) = pair.encrypt("Ringonit".as_bytes()).unwrap();
+        let (nonce, ciphertext) = pair.encrypt(b"Ringonit").unwrap();
 
         let missing = SymKey::new("grohl".to_string(), "201604051449".to_string(), None, None);
         missing.decrypt(&nonce, &ciphertext).unwrap();
@@ -652,8 +647,8 @@ mod test {
         let pair = SymKey::generate_pair_for_ring("beyonce").unwrap();
         pair.to_pair_files(cache.path()).unwrap();
 
-        let (_, ciphertext) = pair.encrypt("Ringonit".as_bytes()).unwrap();
-        pair.decrypt("crazyinlove".as_bytes(), &ciphertext).unwrap();
+        let (_, ciphertext) = pair.encrypt(b"Ringonit").unwrap();
+        pair.decrypt(b"crazyinlove", &ciphertext).unwrap();
     }
 
     #[test]
@@ -663,8 +658,8 @@ mod test {
         let pair = SymKey::generate_pair_for_ring("beyonce").unwrap();
         pair.to_pair_files(cache.path()).unwrap();
 
-        let (nonce, _) = pair.encrypt("Ringonit".as_bytes()).unwrap();
-        pair.decrypt(&nonce, "singleladies".as_bytes()).unwrap();
+        let (nonce, _) = pair.encrypt(b"Ringonit").unwrap();
+        pair.decrypt(&nonce, b"singleladies").unwrap();
     }
 
     #[test]

@@ -35,8 +35,8 @@ use super::PackageTarget;
 #[cfg(test)]
 use std;
 
-pub const DEFAULT_CFG_FILE: &'static str = "default.toml";
-const PATH_KEY: &'static str = "PATH";
+pub const DEFAULT_CFG_FILE: &str = "default.toml";
+const PATH_KEY: &str = "PATH";
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq, Serialize)]
 pub struct PackageInstall {
@@ -123,7 +123,7 @@ impl PackageInstall {
             if let Some(id) = latest {
                 Ok(PackageInstall {
                     installed_path: fs::pkg_install_path(&id, Some(&fs_root_path)),
-                    fs_root_path: PathBuf::from(fs_root_path),
+                    fs_root_path: fs_root_path,
                     package_root_path: package_root_path,
                     ident: id.clone(),
                 })
@@ -203,13 +203,8 @@ impl PackageInstall {
     pub fn is_runnable(&self) -> bool {
         // Currently, a runnable package can be determined by checking if a `run` hook exists in
         // package's hooks directory or directly in the package prefix.
-        if self.installed_path.join("hooks").join("run").is_file()
+        self.installed_path.join("hooks").join("run").is_file()
             || self.installed_path.join("run").is_file()
-        {
-            true
-        } else {
-            false
-        }
     }
 
     /// Determine what kind of package this is.
@@ -249,7 +244,7 @@ impl PackageInstall {
 
         let joined = env::join_paths(paths)?
             .into_string()
-            .map_err(|s| Error::InvalidPathString(s))?;
+            .map_err(Error::InvalidPathString)?;
         // Only insert a PATH entry if the resulting path string is non-empty
         if !joined.is_empty() {
             env.insert(PATH_KEY.to_string(), joined);
@@ -306,13 +301,13 @@ impl PackageInstall {
             Ok(body) => {
                 let mut bind_map = HashMap::new();
                 for line in body.lines() {
-                    let mut parts = line.split("=");
+                    let mut parts = line.split('=');
                     let package = match parts.next() {
                         Some(ident) => ident.parse()?,
                         None => return Err(Error::MetaFileBadBind),
                     };
                     let binds: Result<Vec<BindMapping>> = match parts.next() {
-                        Some(binds) => binds.split(" ").map(|b| b.parse()).collect(),
+                        Some(binds) => binds.split(' ').map(|b| b.parse()).collect(),
                         None => Err(Error::MetaFileBadBind),
                     };
                     bind_map.insert(package, binds?);
@@ -547,7 +542,7 @@ impl PackageInstall {
     fn parse_runtime_environment_metafile(body: &str) -> Result<HashMap<String, String>> {
         let mut env = HashMap::new();
         for line in body.lines() {
-            let parts: Vec<&str> = line.splitn(2, "=").collect();
+            let parts: Vec<&str> = line.splitn(2, '=').collect();
             if parts.len() != 2 {
                 return Err(Error::MetaFileMalformed(MetaFile::RuntimeEnvironment));
             }
@@ -625,7 +620,7 @@ impl PackageInstall {
 
         match self.read_metafile(file) {
             Ok(body) => {
-                if body.len() > 0 {
+                if !body.is_empty() {
                     for id in body.lines() {
                         let package = PackageIdent::from_str(id)?;
                         if !package.fully_qualified() && must_be_fully_qualified {

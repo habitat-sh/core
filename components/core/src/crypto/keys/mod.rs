@@ -222,22 +222,11 @@ fn check_filename(
 
         let do_insert = match pair_type {
             Some(&PairType::Secret) => {
-                if suffix == SECRET_SIG_KEY_SUFFIX
+                suffix == SECRET_SIG_KEY_SUFFIX
                     || suffix == SECRET_BOX_KEY_SUFFIX
                     || suffix == SECRET_SYM_KEY_SUFFIX
-                {
-                    true
-                } else {
-                    false
-                }
             }
-            Some(&PairType::Public) => {
-                if suffix == PUBLIC_KEY_SUFFIX {
-                    true
-                } else {
-                    false
-                }
-            }
+            Some(&PairType::Public) => suffix == PUBLIC_KEY_SUFFIX,
             None => true,
         };
 
@@ -315,7 +304,9 @@ where
             Err(e) => {
                 // filename is still an OsString, so print it as debug output
                 debug!("Invalid filename {:?}", e);
-                return Err(Error::CryptoError(format!("Invalid filename in key path")));
+                return Err(Error::CryptoError(
+                    "Invalid filename in key path".to_string(),
+                ));
             }
         };
         debug!("checking file: {}", &filename);
@@ -505,7 +496,7 @@ fn read_key_bytes_from_str(key: &str) -> Result<Vec<u8>> {
                 .map_err(|e| Error::CryptoError(format!("Can't read raw key {}", e)))?;
             Ok(v)
         }
-        None => Err(Error::CryptoError(format!("Malformed key contents"))),
+        None => Err(Error::CryptoError("Malformed key contents".to_string())),
     }
 }
 
@@ -680,7 +671,7 @@ mod test {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let keyfile = cache.path().join("missing-newlines");
         let mut f = File::create(&keyfile).unwrap();
-        f.write_all("SOMETHING\nELSE\n".as_bytes()).unwrap();
+        f.write_all(b"SOMETHING\nELSE\n").unwrap();
 
         super::read_key_bytes(keyfile.as_path()).unwrap();
     }
@@ -691,7 +682,7 @@ mod test {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
         let keyfile = cache.path().join("missing-newlines");
         let mut f = File::create(&keyfile).unwrap();
-        f.write_all("header\nsomething\n\nI am not base64 content".as_bytes())
+        f.write_all(b"header\nsomething\n\nI am not base64 content")
             .unwrap();
 
         super::read_key_bytes(keyfile.as_path()).unwrap();

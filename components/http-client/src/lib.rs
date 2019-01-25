@@ -43,15 +43,13 @@ mod ssl {
 
     use crate::error::Result;
 
-    const CACERTS_PKG_IDENT: &'static str = "core/cacerts";
-    const CACERT_PEM: &'static str = include_str!(concat!(env!("OUT_DIR"), "/cacert.pem"));
+    const CACERTS_PKG_IDENT: &str = "core/cacerts";
+    const CACERT_PEM: &str = include_str!(concat!(env!("OUT_DIR"), "/cacert.pem"));
 
     pub fn set_ca(ctx: &mut SslContextBuilder, fs_root_path: Option<&Path>) -> Result<()> {
         let cacerts_ident = PackageIdent::from_str(CACERTS_PKG_IDENT)?;
 
-        if let Ok(_) = env::var("SSL_CERT_FILE") {
-            ctx.set_default_verify_paths()?;
-        } else if let Ok(_) = env::var("SSL_CERT_DIR") {
+        if env::var("SSL_CERT_FILE").is_ok() || env::var("SSL_CERT_DIR").is_ok() {
             ctx.set_default_verify_paths()?;
         } else if let Ok(pkg_install) = PackageInstall::load(&cacerts_ident, fs_root_path) {
             let pkg_certs = pkg_install.installed_path().join("ssl/cert.pem");

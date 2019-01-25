@@ -25,7 +25,7 @@ use crate::error::{Error, Result};
 use tempfile::Builder;
 use tempfile::TempDir;
 
-pub const INSTALL_TMP_PREFIX: &'static str = ".hab-pkg-install";
+pub const INSTALL_TMP_PREFIX: &str = ".hab-pkg-install";
 
 /// Return a directory which can be used as a temp dir during package install/
 /// uninstall
@@ -33,17 +33,21 @@ pub const INSTALL_TMP_PREFIX: &'static str = ".hab-pkg-install";
 /// It returns a path which is in the same parent directory as `path`
 /// but with TempDir style randomization
 pub fn temp_package_directory(path: &Path) -> Result<TempDir> {
-    let base = path.parent().ok_or(Error::PackageUnpackFailed(
-        "Could not determine parent directory for temporary package directory".to_owned(),
-    ))?;
+    let base = path.parent().ok_or_else(|| {
+        Error::PackageUnpackFailed(
+            "Could not determine parent directory for temporary package directory".to_owned(),
+        )
+    })?;
     fs::create_dir_all(base)?;
     let temp_install_prefix = path
         .file_name()
         .and_then(|f| f.to_str())
         .and_then(|dirname| Some(format!("{}-{}", INSTALL_TMP_PREFIX, dirname)))
-        .ok_or(Error::PackageUnpackFailed(
-            "Could not generate prefix for temporary package directory".to_owned(),
-        ))?;
+        .ok_or_else(|| {
+            Error::PackageUnpackFailed(
+                "Could not generate prefix for temporary package directory".to_owned(),
+            )
+        })?;
     Ok(Builder::new()
         .prefix(&temp_install_prefix)
         .tempdir_in(base)?)
@@ -67,7 +71,7 @@ pub fn all_packages(path: &Path) -> Result<Vec<PackageIdent>> {
 ///
 ///    /base/ORIGIN/NAME/VERSION/RELEASE/
 ///
-pub fn package_list_for_origin(base_pkg_path: &Path, origin: &String) -> Result<Vec<PackageIdent>> {
+pub fn package_list_for_origin(base_pkg_path: &Path, origin: &str) -> Result<Vec<PackageIdent>> {
     let mut package_list: Vec<PackageIdent> = vec![];
     let mut package_path = PathBuf::from(base_pkg_path);
     package_path.push(&origin);
@@ -160,7 +164,7 @@ fn walk_origins(path: &Path, packages: &mut Vec<PackageIdent>) -> Result<()> {
 /// Helper function for walk_origins. Walks the direcotry at the given
 /// Path for name directories and recurses into them to find version
 /// and release directories.
-fn walk_names(origin: &String, dir: &Path, packages: &mut Vec<PackageIdent>) -> Result<()> {
+fn walk_names(origin: &str, dir: &Path, packages: &mut Vec<PackageIdent>) -> Result<()> {
     for entry in fs::read_dir(dir)? {
         let name_dir = entry?;
         let name_path = name_dir.path();
@@ -175,8 +179,8 @@ fn walk_names(origin: &String, dir: &Path, packages: &mut Vec<PackageIdent>) -> 
 /// Helper function for walk_names. Walks the directory at the given
 /// Path and recurses into them to find release directories.
 fn walk_versions(
-    origin: &String,
-    name: &String,
+    origin: &str,
+    name: &str,
     dir: &Path,
     packages: &mut Vec<PackageIdent>,
 ) -> Result<()> {
@@ -197,9 +201,9 @@ fn walk_versions(
 /// the given packages vector, assuming the given origin, name, and
 /// version.
 fn walk_releases(
-    origin: &String,
-    name: &String,
-    version: &String,
+    origin: &str,
+    name: &str,
+    version: &str,
     dir: &Path,
     packages: &mut Vec<PackageIdent>,
 ) -> Result<()> {
@@ -227,9 +231,9 @@ fn walk_releases(
 ///    - An error occurs reading the package target
 ///    - The package target doesn't match the given active target
 fn package_ident_from_dir(
-    origin: &String,
-    name: &String,
-    version: &String,
+    origin: &str,
+    name: &str,
+    version: &str,
     active_target: &PackageTarget,
     dir: &Path,
 ) -> Option<PackageIdent> {
@@ -282,9 +286,9 @@ fn package_ident_from_dir(
     // otherwise skip the candidate
     if active_target == &install_target {
         return Some(PackageIdent::new(
-            origin.clone(),
-            name.clone(),
-            Some(version.clone()),
+            origin.to_string(),
+            name.to_string(),
+            Some(version.to_string()),
             Some(release.to_owned()),
         ));
     } else {

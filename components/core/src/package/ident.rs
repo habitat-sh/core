@@ -95,7 +95,7 @@ impl PackageIdent {
         self.archive_name_impl(PackageTarget::active_target())
     }
 
-    pub fn archive_name_with_target(&self, ref target: &PackageTarget) -> Result<String> {
+    pub fn archive_name_with_target(&self, target: &PackageTarget) -> Result<String> {
         self.archive_name_impl(target)
     }
 
@@ -162,7 +162,7 @@ impl PackageIdent {
         }
     }
 
-    fn archive_name_impl(&self, ref target: &PackageTarget) -> Result<String> {
+    fn archive_name_impl(&self, target: &PackageTarget) -> Result<String> {
         if self.fully_qualified() {
             Ok(format!(
                 "{}-{}-{}-{}-{}.hart",
@@ -237,7 +237,7 @@ impl FromStr for PackageIdent {
     type Err = Error;
 
     fn from_str(value: &str) -> result::Result<Self, Self::Err> {
-        let items: Vec<&str> = value.split("/").collect();
+        let items: Vec<&str> = value.split('/').collect();
         let (origin, name, ver, rel) = match items.len() {
             2 => (items[0], items[1], None, None),
             3 => (items[0], items[1], Some(items[2]), None),
@@ -704,9 +704,8 @@ mod tests {
 
     #[test]
     fn version_sort_error() {
-        match version_sort("1.0.0-alpha1", "undefined") {
-            Ok(compare) => panic!("unexpected {:?}", compare),
-            Err(_) => (),
+        if let Ok(compare) = version_sort("1.0.0-alpha1", "undefined") {
+            panic!("unexpected {:?}", compare);
         }
     }
 
