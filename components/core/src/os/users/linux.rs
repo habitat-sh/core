@@ -12,12 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use caps::{self, CapSet, Capability};
 use std::path::PathBuf;
 
 use crate::error::{Error, Result};
-use crate::linux_users;
-use crate::linux_users::os::unix::{GroupExt, UserExt};
+use users;
+use users::os::unix::{GroupExt, UserExt};
 
 /// This is currently the "master check" for whether the Supervisor
 /// can behave "as root".
@@ -25,27 +24,33 @@ use crate::linux_users::os::unix::{GroupExt, UserExt};
 /// All capabilities must be present. If we can run processes as other
 /// users, but can't change ownership, then the processes won't be
 /// able to access their files. Similar logic holds for the reverse.
+#[cfg(target_os = "linux")]
 pub fn can_run_services_as_svc_user() -> bool {
+    use caps::{self, CapSet, Capability};
+
+    fn has(cap: Capability) -> bool {
+        caps::has_cap(None, CapSet::Effective, cap).unwrap_or(false)
+    }
+
     has(Capability::CAP_SETUID) && has(Capability::CAP_SETGID) && has(Capability::CAP_CHOWN)
 }
 
-/// Helper function; does the current thread have `cap` in its
-/// effective capability set?
-fn has(cap: Capability) -> bool {
-    caps::has_cap(None, CapSet::Effective, cap).unwrap_or(false)
+#[cfg(target_os = "macos")]
+pub fn can_run_services_as_svc_user() -> bool {
+    true
 }
 
 pub fn get_uid_by_name(owner: &str) -> Option<u32> {
-    linux_users::get_user_by_name(owner).map(|u| u.uid())
+    users::get_user_by_name(owner).map(|u| u.uid())
 }
 
 pub fn get_gid_by_name(group: &str) -> Option<u32> {
-    linux_users::get_group_by_name(group).map(|g| g.gid())
+    users::get_group_by_name(group).map(|g| g.gid())
 }
 
 /// Any members that fail conversion from OsString to string will be omitted
 pub fn get_members_by_groupname(group: &str) -> Option<Vec<String>> {
-    linux_users::get_group_by_name(group).map(|g| {
+    users::get_group_by_name(group).map(|g| {
         g.members()
             .to_vec()
             .into_iter()
@@ -55,31 +60,31 @@ pub fn get_members_by_groupname(group: &str) -> Option<Vec<String>> {
 }
 
 pub fn get_current_username() -> Option<String> {
-    linux_users::get_current_username().and_then(|os_string| os_string.into_string().ok())
+    users::get_current_username().and_then(|os_string| os_string.into_string().ok())
 }
 
 pub fn get_current_groupname() -> Option<String> {
-    linux_users::get_current_groupname().and_then(|os_string| os_string.into_string().ok())
+    users::get_current_groupname().and_then(|os_string| os_string.into_string().ok())
 }
 
 pub fn get_effective_username() -> Option<String> {
-    linux_users::get_effective_username().and_then(|os_string| os_string.into_string().ok())
+    users::get_effective_username().and_then(|os_string| os_string.into_string().ok())
 }
 
 pub fn get_effective_uid() -> u32 {
-    linux_users::get_effective_uid()
+    users::get_effective_uid()
 }
 
 pub fn get_effective_gid() -> u32 {
-    linux_users::get_effective_gid()
+    users::get_effective_gid()
 }
 
 pub fn get_effective_groupname() -> Option<String> {
-    linux_users::get_effective_groupname().and_then(|os_string| os_string.into_string().ok())
+    users::get_effective_groupname().and_then(|os_string| os_string.into_string().ok())
 }
 
 pub fn get_home_for_user(username: &str) -> Option<PathBuf> {
-    linux_users::get_user_by_name(username).map(|u| PathBuf::from(u.home_dir()))
+    users::get_user_by_name(username).map(|u| PathBuf::from(u.home_dir()))
 }
 
 pub fn root_level_account() -> String {
