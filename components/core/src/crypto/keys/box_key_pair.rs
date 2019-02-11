@@ -12,10 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::borrow::Cow;
 use std::path::{Path, PathBuf};
 use std::str;
 
 use base64;
+use serde_derive::{Deserialize, Serialize};
 use sodiumoxide::crypto::box_;
 use sodiumoxide::crypto::box_::curve25519xsalsa20poly1305::PublicKey as BoxPublicKey;
 use sodiumoxide::crypto::box_::curve25519xsalsa20poly1305::SecretKey as BoxSecretKey;
@@ -41,6 +43,41 @@ pub struct BoxSecret<'a> {
 }
 
 pub type BoxKeyPair = KeyPair<BoxPublicKey, BoxSecretKey>;
+
+// A sodiumoxide sealed box that has been base64-encoded together with
+// metadata to indicate how it should be decrypted
+#[derive(Serialize, Deserialize)]
+pub struct WrappedSealedBox<'a>(Cow<'a, str>);
+
+impl<'a> WrappedSealedBox<'a> {
+    pub fn into_bytes(self) -> Vec<u8> {
+        self.0.into_owned().into_bytes()
+    }
+
+    /// Only needed by builder due to double-base64 encoding in
+    /// builder_core::integrations::encrypt
+    pub fn as_bytes(&self) -> &[u8] {
+        self.0.as_bytes()
+    }
+
+    pub fn from_bytes(bytes: &'a [u8]) -> std::result::Result<Self, std::str::Utf8Error> {
+        str::from_utf8(bytes)
+            .map(Cow::Borrowed)
+            .map(WrappedSealedBox)
+    }
+}
+
+impl<'a> From<String> for WrappedSealedBox<'a> {
+    fn from(payload: String) -> Self {
+        Self(Cow::Owned(payload))
+    }
+}
+
+impl<'a, 'b: 'a> From<&'b str> for WrappedSealedBox<'a> {
+    fn from(payload: &'b str) -> Self {
+        Self(Cow::Borrowed(payload))
+    }
+}
 
 impl BoxKeyPair {
     pub fn generate_pair_for_service<S1, S2>(org: S1, service_group: S2) -> Result<Self>
@@ -172,11 +209,15 @@ impl BoxKeyPair {
     /// Key names and nonce (if needed) are embedded in the payload.
     /// If no recipient is specified, the encrypted payload is decryptable only
     /// by the encrypting user.
-    pub fn encrypt(&self, data: &[u8], receiver: Option<&Self>) -> Result<Vec<u8>> {
+    ///
+    /// Since the returned string contains both plaintext metadata and ciphertext
+    /// The ciphertext (and nonce, when present) is already base64-encoded.
+    pub fn encrypt(&self, data: &[u8], receiver: Option<&Self>) -> Result<WrappedSealedBox> {
         match receiver {
             Some(r) => self.encrypt_box(data, r),
             None => self.encrypt_anonymous_box(data),
         }
+        .map(WrappedSealedBox::from)
     }
 
     pub fn to_public_string(&self) -> Result<String> {
@@ -222,33 +263,29 @@ impl BoxKeyPair {
         Ok(Self::new(name, revision, Some(pk), Some(sk)))
     }
 
-    fn encrypt_box(&self, data: &[u8], receiver: &Self) -> Result<Vec<u8>> {
+    fn encrypt_box(&self, data: &[u8], receiver: &Self) -> Result<String> {
         let nonce = gen_nonce();
         let ciphertext = box_::seal(data, &nonce, receiver.public()?, self.secret()?);
 
-        let out = format!(
+        Ok(format!(
             "{}\n{}\n{}\n{}\n{}",
             BOX_FORMAT_VERSION,
             &self.name_with_rev(),
             &receiver.name_with_rev(),
             base64::encode(&nonce[..]),
             base64::encode(&ciphertext)
-        );
-
-        Ok(out.into_bytes())
+        ))
     }
 
-    fn encrypt_anonymous_box(&self, data: &[u8]) -> Result<Vec<u8>> {
+    fn encrypt_anonymous_box(&self, data: &[u8]) -> Result<String> {
         let ciphertext = sealedbox::seal(data, self.public()?);
 
-        let out = format!(
+        Ok(format!(
             "{}\n{}\n{}",
             ANONYMOUS_BOX_FORMAT_VERSION,
             &self.name_with_rev(),
             base64::encode(&ciphertext)
-        );
-
-        Ok(out.into_bytes())
+        ))
     }
 
     pub fn box_key_format_version(version: Option<&str>) -> Result<&str> {
@@ -329,8 +366,8 @@ impl BoxKeyPair {
 
     // Return the metadata and encrypted text from a secret payload.
     // This is useful for services consuming an encrypted payload and need to decrypt it without having keys on disk
-    pub fn secret_metadata(payload: &[u8]) -> Result<BoxSecret<'_>> {
-        let mut lines = str::from_utf8(payload)?.lines();
+    pub fn secret_metadata<'a, 'b>(payload: &'b WrappedSealedBox<'a>) -> Result<BoxSecret<'b>> {
+        let mut lines = payload.0.lines();
         let version = Self::box_key_format_version(lines.next())?;
         let sender = Self::box_key_sender(lines.next())?;
         let receiver = if Self::is_anonymous_box(version) {
@@ -355,7 +392,7 @@ impl BoxKeyPair {
     /// Decrypt data from a user that was received at a service
     /// Key names are embedded in the message payload which must
     /// be present while decrypting.
-    pub fn decrypt_with_path<P>(payload: &[u8], cache_key_path: P) -> Result<Vec<u8>>
+    pub fn decrypt_with_path<P>(payload: &WrappedSealedBox, cache_key_path: P) -> Result<Vec<u8>>
     where
         P: AsRef<Path>,
     {
@@ -803,9 +840,9 @@ mod test {
             .unwrap();
         }
 
+        let sender = BoxKeyPair::get_latest_pair_for("wecoyote", sender_cache.path()).unwrap();
         let ciphertext = {
             // Load the sender and receiver keys from sender cache to encrypt
-            let sender = BoxKeyPair::get_latest_pair_for("wecoyote", sender_cache.path()).unwrap();
             let receiver =
                 BoxKeyPair::get_latest_pair_for("tnt.default@acme", sender_cache.path()).unwrap();
             sender.encrypt(b"Falling hurts", Some(&receiver)).unwrap()
@@ -904,14 +941,19 @@ mod test {
     #[should_panic]
     fn decrypt_empty_sender_key() {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
-        BoxKeyPair::decrypt_with_path(b"BOX-1\n\nuhoh", cache.path()).unwrap();
+        BoxKeyPair::decrypt_with_path(&WrappedSealedBox::from("BOX-1\n\nuhoh"), cache.path())
+            .unwrap();
     }
 
     #[test]
     #[should_panic]
     fn decrypt_invalid_sender_key() {
         let cache = Builder::new().prefix("key_cache").tempdir().unwrap();
-        BoxKeyPair::decrypt_with_path(b"BOX-1\nnope-nope\nuhoh", cache.path()).unwrap();
+        BoxKeyPair::decrypt_with_path(
+            &WrappedSealedBox::from("BOX-1\nnope-nope\nuhoh"),
+            cache.path(),
+        )
+        .unwrap();
     }
 
     #[test]
@@ -922,7 +964,7 @@ mod test {
         sender.to_pair_files(cache.path()).unwrap();
 
         let payload = format!("BOX-1\n{}\n\nuhoh", sender.name_with_rev());
-        BoxKeyPair::decrypt_with_path(payload.as_bytes(), cache.path()).unwrap();
+        BoxKeyPair::decrypt_with_path(&WrappedSealedBox::from(payload), cache.path()).unwrap();
     }
 
     #[test]
@@ -933,7 +975,7 @@ mod test {
         sender.to_pair_files(cache.path()).unwrap();
 
         let payload = format!("BOX-1\n{}\nnope-nope\nuhoh", sender.name_with_rev());
-        BoxKeyPair::decrypt_with_path(payload.as_bytes(), cache.path()).unwrap();
+        BoxKeyPair::decrypt_with_path(&WrappedSealedBox::from(payload), cache.path()).unwrap();
     }
 
     #[test]
@@ -950,7 +992,7 @@ mod test {
             sender.name_with_rev(),
             receiver.name_with_rev()
         );
-        BoxKeyPair::decrypt_with_path(payload.as_bytes(), cache.path()).unwrap();
+        BoxKeyPair::decrypt_with_path(&WrappedSealedBox::from(payload), cache.path()).unwrap();
     }
 
     #[test]
@@ -967,7 +1009,7 @@ mod test {
             sender.name_with_rev(),
             receiver.name_with_rev()
         );
-        BoxKeyPair::decrypt_with_path(payload.as_bytes(), cache.path()).unwrap();
+        BoxKeyPair::decrypt_with_path(&WrappedSealedBox::from(payload), cache.path()).unwrap();
     }
 
     #[test]
@@ -981,7 +1023,7 @@ mod test {
 
         let payload = sender.encrypt(b"problems ahead", Some(&receiver)).unwrap();
         let mut botched = String::new();
-        let mut lines = str::from_utf8(payload.as_slice()).unwrap().lines();
+        let mut lines = payload.0.lines();
         botched.push_str(lines.next().unwrap()); // version
         botched.push('\n');
         botched.push_str(lines.next().unwrap()); // sender
@@ -992,7 +1034,7 @@ mod test {
         botched.push('\n');
         botched.push_str("not:base64");
 
-        BoxKeyPair::decrypt_with_path(botched.as_bytes(), cache.path()).unwrap();
+        BoxKeyPair::decrypt_with_path(&WrappedSealedBox::from(botched), cache.path()).unwrap();
     }
 
     #[test]
@@ -1006,7 +1048,7 @@ mod test {
 
         let payload = sender.encrypt(b"problems ahead", Some(&receiver)).unwrap();
         let mut botched = String::new();
-        let mut lines = str::from_utf8(payload.as_slice()).unwrap().lines();
+        let mut lines = payload.0.lines();
         botched.push_str(lines.next().unwrap()); // version
         botched.push('\n');
         botched.push_str(lines.next().unwrap()); // sender
@@ -1017,6 +1059,6 @@ mod test {
         botched.push('\n');
         botched.push_str("uhoh");
 
-        BoxKeyPair::decrypt_with_path(botched.as_bytes(), cache.path()).unwrap();
+        BoxKeyPair::decrypt_with_path(&WrappedSealedBox::from(botched), cache.path()).unwrap();
     }
 }
