@@ -42,7 +42,6 @@ matrix:
         directories:
           - "$HOME/pkgs"
       before_script:
-        - rustup component add rustfmt-preview
         - rustup component add clippy
       before_install:
         - ./support/ci/compile_libsodium.sh
@@ -51,7 +50,7 @@ matrix:
         - source ./support/ci/rust_env.sh
       script:
         - ./support/ci/rust_tests.sh
-        - ./support/ci/lint.sh
+        - ./support/ci/rustfmt.sh
         - make lint
 
 notifications:
