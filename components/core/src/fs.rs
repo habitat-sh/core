@@ -12,6 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::{env as henv,
+            error::{Error,
+                    Result},
+            os::users::{self,
+                        assert_pkg_user_and_group},
+            package::{Identifiable,
+                      PackageIdent,
+                      PackageInstall}};
 use dirs;
 use std::{env,
           fs,
@@ -21,15 +29,6 @@ use std::{env,
                  PathBuf},
           str::FromStr};
 use tempfile;
-
-use crate::{env as henv,
-            error::{Error,
-                    Result},
-            os::users::{self,
-                        assert_pkg_user_and_group},
-            package::{Identifiable,
-                      PackageIdent,
-                      PackageInstall}};
 
 /// The default root path of the Habitat filesystem
 pub const ROOT_PATH: &str = "hab";
@@ -336,6 +335,48 @@ impl<'a> SvcDir<'a> {
         self.create_all_sup_owned_dirs()?;
         self.create_all_svc_owned_dirs()?;
 
+        Ok(())
+    }
+
+    /// Remove all templated content (hooks and configuration) from a
+    /// service directory.
+    ///
+    /// Useful for removing rendered files that may be from older
+    /// versions of a service that have been removed from the current
+    /// version.
+    pub fn purge_templated_content(&self) -> Result<()> {
+        for dir_path in &[svc_config_path(&self.service_name),
+                          svc_hooks_path(&self.service_name)]
+        {
+            debug!("Purging any old templated content from {}",
+                   dir_path.display());
+            Self::purge_directory_content(dir_path)?;
+        }
+        Ok(())
+    }
+
+    /// Utility function that removes all files in `root`.
+    fn purge_directory_content(root: &Path) -> Result<()> {
+        for entry in fs::read_dir(root)? {
+            let entry = entry?;
+            match entry.file_type() {
+                Ok(ft) => {
+                    debug!("Purging {:?} {:?}", ft, entry);
+                    if ft.is_file() || ft.is_symlink() {
+                        fs::remove_file(entry.path())?;
+                    } else if ft.is_dir() {
+                        fs::remove_dir_all(entry.path())?;
+                    } else {
+                        debug!("Nothing to do for {:?}", ft);
+                    }
+                }
+                Err(e) => {
+                    warn!("Not purging {}; could not determine file type: {}",
+                          entry.path().display(),
+                          e);
+                }
+            }
+        }
         Ok(())
     }
 
@@ -721,6 +762,54 @@ impl AtomicWriter {
 pub fn atomic_write(dest_path: &Path, data: impl AsRef<[u8]>) -> io::Result<()> {
     let w = AtomicWriter::new(dest_path)?;
     w.with_writer(|f| f.write_all(data.as_ref()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod svc_dir {
+        use super::*;
+        use std::fs::{self,
+                      File};
+        use tempfile::tempdir;
+
+        #[test]
+        fn purge_directory_removes_contents() {
+            let root = tempdir().expect("couldn't create tempdir");
+
+            let file_1 = root.path().join("file_1");
+            File::create(&file_1).expect("Couldn't create file");
+
+            let file_2 = root.path().join("file_2");
+            File::create(&file_2).expect("Couldn't create file");
+
+            let sub_dir = root.path().join("test_dir");
+            fs::create_dir(&sub_dir).expect("Couldn't create directory");
+
+            let sub_file_1 = sub_dir.join("sub_file_1");
+            File::create(&sub_file_1).expect("Couldn't create file");
+
+            let sub_file_2 = sub_dir.join("sub_file_2");
+            File::create(&sub_file_2).expect("Couldn't create file");
+
+            assert!(root.as_ref().exists());
+            assert!(file_1.exists());
+            assert!(file_2.exists());
+            assert!(sub_dir.exists());
+            assert!(sub_file_1.exists());
+            assert!(sub_file_2.exists());
+
+            SvcDir::purge_directory_content(&root.path()).expect("Couldn't purge!");
+
+            assert!(root.as_ref().exists());
+            assert!(!file_1.exists());
+            assert!(!file_2.exists());
+            assert!(!sub_dir.exists());
+            assert!(!sub_file_1.exists());
+            assert!(!sub_file_2.exists());
+        }
+    }
 }
 
 #[cfg(test)]
