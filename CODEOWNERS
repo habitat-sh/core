@@ -1,4 +1,5 @@
-components/core @reset @fnichol @christophermaier @chefsalim @raskchanky @baumanj @jamesc
-components/http-client @fnichol @chefsalim @raskchanky
+* @christophermaier @raskchanky
+components/core @christophermaier @chefsalim @raskchanky @baumanj
+components/http-client @chefsalim @raskchanky
 components/win-users @mwrock
-support @fnichol @christophermaier @raskchanky @baumanj
+support @christophermaier @raskchanky @baumanj
