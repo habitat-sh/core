@@ -46,7 +46,7 @@ impl fmt::Debug for SymKey {
 }
 
 impl SymKey {
-    pub fn generate_pair_for_ring<S: ToString>(name: S) -> Result<Self> {
+    pub fn generate_pair_for_ring(name: &str) -> Result<Self> {
         let revision = mk_revision_string()?;
         let secret_key = secretbox::gen_key();
         Ok(SymKey::new(name.to_string(),
@@ -91,7 +91,7 @@ impl SymKey {
         match all.len() {
             0 => {
                 let msg = format!("No revisions found for {} sym key", name);
-                return Err(Error::CryptoError(msg));
+                Err(Error::CryptoError(msg))
             }
             _ => Ok(all.remove(0)),
         }
@@ -228,8 +228,8 @@ impl SymKey {
                            &base64::encode(&sk[..])))
             }
             None => {
-                return Err(Error::CryptoError(format!("No secret key present for {}",
-                                                      self.name_with_rev())));
+                Err(Error::CryptoError(format!("No secret key present for {}",
+                                               self.name_with_rev())))
             }
         }
     }
@@ -250,9 +250,9 @@ impl SymKey {
         match SymSecretKey::from_slice(&bytes) {
             Some(sk) => Ok(sk),
             None => {
-                return Err(Error::CryptoError(format!("Can't read sym secret key \
-                                                       for {}",
-                                                      key_with_rev)));
+                Err(Error::CryptoError(format!("Can't read sym secret key \
+                                                for {}",
+                                               key_with_rev)))
             }
         }
     }

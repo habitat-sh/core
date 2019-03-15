@@ -151,7 +151,7 @@ fn walk_origins(path: &Path, packages: &mut Vec<PackageIdent>) -> Result<()> {
         let origin_dir = entry?;
         let origin_path = origin_dir.path();
         if fs::metadata(&origin_path)?.is_dir() {
-            let origin = filename_from_entry(origin_dir);
+            let origin = filename_from_entry(&origin_dir);
             walk_names(&origin, &origin_path, packages)?;
         }
     }
@@ -166,7 +166,7 @@ fn walk_names(origin: &str, dir: &Path, packages: &mut Vec<PackageIdent>) -> Res
         let name_dir = entry?;
         let name_path = name_dir.path();
         if fs::metadata(&name_path)?.is_dir() {
-            let name = filename_from_entry(name_dir);
+            let name = filename_from_entry(&name_dir);
             walk_versions(&origin, &name, &name_path, packages)?;
         }
     }
@@ -184,7 +184,7 @@ fn walk_versions(origin: &str,
         let version_dir = entry?;
         let version_path = version_dir.path();
         if fs::metadata(&version_path)?.is_dir() {
-            let version = filename_from_entry(version_dir);
+            let version = filename_from_entry(&version_dir);
             walk_releases(origin, name, &version, &version_path, packages)?;
         }
     }
@@ -228,7 +228,7 @@ fn walk_releases(origin: &str,
 fn package_ident_from_dir(origin: &str,
                           name: &str,
                           version: &str,
-                          active_target: &PackageTarget,
+                          active_target: PackageTarget,
                           dir: &Path)
                           -> Option<PackageIdent> {
     let release = if let Some(rel) = dir.file_name().and_then(|f| f.to_str()) {
@@ -244,7 +244,7 @@ fn package_ident_from_dir(origin: &str,
         return None;
     }
 
-    let metafile_content = read_metafile(dir, &MetaFile::Target);
+    let metafile_content = read_metafile(dir, MetaFile::Target);
     // If there is an error reading the target metafile, then skip the candidate
     if let Err(e) = metafile_content {
         debug!("PackageInstall::package_ident_from_dir(): rejected PackageInstall candidate due \
@@ -271,23 +271,23 @@ fn package_ident_from_dir(origin: &str,
 
     // Ensure that the installed package's target matches the active `PackageTarget`,
     // otherwise skip the candidate
-    if active_target == &install_target {
-        return Some(PackageIdent::new(origin.to_string(),
-                                      name.to_string(),
-                                      Some(version.to_string()),
-                                      Some(release.to_owned())));
+    if active_target == install_target {
+        Some(PackageIdent::new(origin.to_string(),
+                               name.to_string(),
+                               Some(version.to_string()),
+                               Some(release.to_owned())))
     } else {
         debug!("PackageInstall::package_ident_from_dir(): rejected PackageInstall candidate, \
                 found={}, installed_target={}, active_target={}",
                dir.display(),
                install_target,
                active_target,);
-        return None;
+        None
     }
 }
 
-fn filename_from_entry(entry: fs::DirEntry) -> String {
-    return entry.file_name().to_string_lossy().into_owned().to_string();
+fn filename_from_entry(entry: &fs::DirEntry) -> String {
+    entry.file_name().to_string_lossy().into_owned().to_string()
 }
 
 fn is_existing_dir(path: &Path) -> Result<bool> {
@@ -296,9 +296,9 @@ fn is_existing_dir(path: &Path) -> Result<bool> {
             if err.kind() == io::ErrorKind::NotFound {
                 return Ok(false);
             }
-            return Err(Error::from(err));
+            Err(Error::from(err))
         }
-        Ok(metadata) => return Ok(metadata.is_dir()),
+        Ok(metadata) => Ok(metadata.is_dir()),
     }
 }
 

@@ -206,6 +206,14 @@ impl PackageArchive {
     // a service. It determines that by checking for the presence of a run hook file or a
     // pkg_svc_run value. Therefore, if we can detect the presence of a SVC_USER file, we can
     // consider this archive a service.
+    //
+    // The allow below is necessary because `is_*` functions expect a `&self`, not `&mut self`.
+    // It would be good to refactor this struct to do the read_metadata in new and then
+    // eliminate the `&mut self`s on all the accessor functions, but that's a more involved
+    // change than we want to undertake now.
+    //
+    // See https://rust-lang.github.io/rust-clippy/master/index.html#wrong_self_convention
+    #[allow(clippy::wrong_self_convention)]
     pub fn is_a_service(&mut self) -> bool {
         match self.svc_user() {
             Ok(_) => true,
@@ -399,7 +407,7 @@ impl PackageArchive {
             if let Some(entry) = reader.next_header() {
                 for (matched, regx) in METAFILE_REGXS.iter() {
                     if regx.is_match(entry.pathname()) {
-                        matched_type = Some((*matched).clone());
+                        matched_type = Some(*matched);
                         matched_count += 1;
                         break;
                     }

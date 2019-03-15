@@ -115,7 +115,7 @@ pub struct PkgEnv {
 }
 
 impl PkgEnv {
-    pub fn new(values: HashMap<String, String>, separators: HashMap<String, String>) -> Self {
+    pub fn new(values: HashMap<String, String>, separators: &HashMap<String, String>) -> Self {
         Self { inner: values.into_iter()
                             .map(|(key, value)| {
                                 if let Some(sep) = separators.get(&key) {
@@ -131,8 +131,8 @@ impl PkgEnv {
                             .collect(), }
     }
 
-    pub fn from_paths(paths: Vec<PathBuf>) -> Self {
-        let p = env::join_paths(&paths).expect("Failed to build path string");
+    pub fn from_paths(paths: &[PathBuf]) -> Self {
+        let p = env::join_paths(paths).expect("Failed to build path string");
         Self { inner: vec![EnvVar { key:       "PATH".to_string(),
                                     value:     p.into_string()
                                                 .expect("Failed to convert path to utf8 string"),
@@ -149,7 +149,7 @@ impl IntoIterator for PkgEnv {
     fn into_iter(self) -> Self::IntoIter { self.inner.into_iter() }
 }
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, Hash, PartialEq, Eq)]
 pub enum MetaFile {
     BindMap, // Composite-only
     Binds,
@@ -212,28 +212,28 @@ impl fmt::Display for MetaFile {
 /// Read a metadata file from within a package directory if it exists
 ///
 /// Returns the contents of the file
-pub fn read_metafile<P: AsRef<Path>>(installed_path: P, file: &MetaFile) -> Result<String> {
+pub fn read_metafile<P: AsRef<Path>>(installed_path: P, file: MetaFile) -> Result<String> {
     match existing_metafile(installed_path, file) {
         Some(filepath) => {
             match File::open(&filepath) {
                 Ok(mut f) => {
                     let mut data = String::new();
                     if f.read_to_string(&mut data).is_err() {
-                        return Err(Error::MetaFileMalformed(file.clone()));
+                        return Err(Error::MetaFileMalformed(file));
                     }
                     Ok(data.trim().to_string())
                 }
                 Err(e) => Err(Error::MetaFileIO(e)),
             }
         }
-        None => Err(Error::MetaFileNotFound(file.clone())),
+        None => Err(Error::MetaFileNotFound(file)),
     }
 }
 
 /// Returns the path to a specified MetaFile in an installed path if it exists.
 ///
 /// Useful for fallback logic for dealing with older Habitat packages.
-fn existing_metafile<P: AsRef<Path>>(installed_path: P, file: &MetaFile) -> Option<PathBuf> {
+fn existing_metafile<P: AsRef<Path>>(installed_path: P, file: MetaFile) -> Option<PathBuf> {
     let filepath = installed_path.as_ref().join(file.to_string());
     match std::fs::metadata(&filepath) {
         Ok(_) => Some(filepath),
@@ -334,8 +334,8 @@ port=front-end.port
     fn build_pkg_env() {
         let mut result =
             PkgEnv::new(parse_key_value(&ENVIRONMENT).unwrap(),
-                        parse_key_value(&ENVIRONMENT_SEP).unwrap()).into_iter()
-                                                                   .collect::<Vec<_>>();
+                        &parse_key_value(&ENVIRONMENT_SEP).unwrap()).into_iter()
+                                                                    .collect::<Vec<_>>();
         // Sort the result by key, so we have a guarantee of order
         result.sort_by_key(|v| v.key.to_owned());
 
@@ -355,14 +355,14 @@ port=front-end.port
 
     #[test]
     fn build_pkg_env_is_empty() {
-        let result = PkgEnv::new(HashMap::new(), HashMap::new());
+        let result = PkgEnv::new(HashMap::new(), &HashMap::new());
         assert!(result.is_empty());
     }
 
     #[test]
     fn build_pkg_env_from_path() {
-        let result = PkgEnv::from_paths(vec![PathBuf::from(PATH)]).into_iter()
-                                                                  .collect::<Vec<_>>();
+        let result = PkgEnv::from_paths(&[PathBuf::from(PATH)]).into_iter()
+                                                               .collect::<Vec<_>>();
 
         let expected = vec![EnvVar { key:       "PATH".to_string(),
                                      value:     "/hab/pkgs/python/setuptools/35.0.1/\
@@ -399,8 +399,7 @@ port=front-end.port
         let expected = "core/foo=db:core/database";
         write_metafile(install_dir, MetaFile::Binds, expected);
 
-        let bind = MetaFile::Binds;
-        let bind_map = read_metafile(install_dir, &bind).unwrap();
+        let bind_map = read_metafile(install_dir, MetaFile::Binds).unwrap();
 
         assert_eq!(expected, bind_map);
     }
@@ -409,9 +408,7 @@ port=front-end.port
     fn reading_a_non_existing_metafile_is_an_error() {
         let pkg_root = Builder::new().prefix("pkg-root").tempdir().unwrap();
         let install_dir = pkg_root.path();
-
-        let bind = MetaFile::Binds;
-        let bind_map = read_metafile(install_dir, &bind);
+        let bind_map = read_metafile(install_dir, MetaFile::Binds);
 
         assert!(bind_map.is_err());
     }
