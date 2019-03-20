@@ -49,9 +49,9 @@ matrix:
         - ./support/ci/compile_zmq.sh
         - source ./support/ci/rust_env.sh
       script:
+        - make lint
         - ./support/ci/rust_tests.sh
         - ./support/ci/rustfmt.sh
-        - make lint
 
 notifications:
   webhooks:
