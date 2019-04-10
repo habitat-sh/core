@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::error::{Error,
+                   Result};
 use std::{ffi::OsString,
           io,
           path::PathBuf,
           process::{self,
                     Command},
           ptr};
-
 use winapi::{shared::minwindef::{DWORD,
                                  FALSE,
                                  LPDWORD},
@@ -28,21 +29,9 @@ use winapi::{shared::minwindef::{DWORD,
                           PROCESS_QUERY_LIMITED_INFORMATION,
                           PROCESS_TERMINATE}}};
 
-use super::{OsSignal,
-            Signal};
-use crate::error::{Error,
-                   Result};
-
 const STILL_ACTIVE: u32 = 259;
 
 pub type Pid = DWORD;
-pub type SignalCode = DWORD;
-
-impl OsSignal for Signal {
-    fn from_signal_code(code: SignalCode) -> Option<Signal> { None }
-
-    fn os_signal(&self) -> SignalCode { 0 }
-}
 
 pub fn become_command(command: PathBuf, args: &[OsString]) -> Result<()> {
     become_child_command(command, args)
@@ -80,13 +69,6 @@ pub fn is_alive(pid: Pid) -> bool {
         }
         None => false,
     }
-}
-
-pub fn signal(pid: Pid, signal: Signal) -> Result<()> {
-    debug!("sending no-op(windows) signal {} to pid {}",
-           signal.os_signal(),
-           pid);
-    Ok(())
 }
 
 /// Executes a command as a child process and exits with the child's exit code.

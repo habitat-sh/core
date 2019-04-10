@@ -21,47 +21,28 @@ use std::{ffi::OsString,
 use libc::{self,
            pid_t};
 
-use super::{OsSignal,
-            Signal};
 use crate::error::{Error,
                    Result};
 
 pub type Pid = libc::pid_t;
-pub type SignalCode = libc::c_int;
+pub(crate) type SignalCode = libc::c_int;
 
-impl OsSignal for Signal {
-    fn from_signal_code(code: SignalCode) -> Option<Signal> {
-        match code {
-            libc::SIGHUP => Some(Signal::HUP),
-            libc::SIGINT => Some(Signal::INT),
-            libc::SIGILL => Some(Signal::ILL),
-            libc::SIGABRT => Some(Signal::ABRT),
-            libc::SIGFPE => Some(Signal::FPE),
-            libc::SIGKILL => Some(Signal::KILL),
-            libc::SIGSEGV => Some(Signal::SEGV),
-            libc::SIGTERM => Some(Signal::TERM),
-            libc::SIGCHLD => Some(Signal::CHLD),
-            _ => None,
-        }
-    }
-
-    fn os_signal(&self) -> SignalCode {
-        match *self {
-            Signal::INT => libc::SIGINT,
-            Signal::ILL => libc::SIGILL,
-            Signal::ABRT => libc::SIGABRT,
-            Signal::FPE => libc::SIGFPE,
-            Signal::KILL => libc::SIGKILL,
-            Signal::SEGV => libc::SIGSEGV,
-            Signal::TERM => libc::SIGTERM,
-            Signal::HUP => libc::SIGHUP,
-            Signal::QUIT => libc::SIGQUIT,
-            Signal::ALRM => libc::SIGALRM,
-            Signal::USR1 => libc::SIGUSR1,
-            Signal::USR2 => libc::SIGUSR2,
-            Signal::CHLD => libc::SIGCHLD,
-        }
-    }
+#[allow(non_snake_case)]
+#[derive(Clone, Copy, Debug)]
+pub enum Signal {
+    INT,
+    ILL,
+    ABRT,
+    FPE,
+    KILL,
+    SEGV,
+    TERM,
+    HUP,
+    QUIT,
+    ALRM,
+    USR1,
+    USR2,
+    CHLD,
 }
 
 pub fn become_command(command: PathBuf, args: &[OsString]) -> Result<()> {
@@ -87,13 +68,32 @@ pub fn is_alive(pid: Pid) -> bool {
 
 pub fn signal(pid: Pid, signal: Signal) -> Result<()> {
     unsafe {
-        match libc::kill(pid as pid_t, signal.os_signal()) {
+        match libc::kill(pid as pid_t, signal.into()) {
             0 => Ok(()),
             e => Err(Error::SignalFailed(e, io::Error::last_os_error())),
         }
     }
 }
 
+impl From<Signal> for SignalCode {
+    fn from(value: Signal) -> SignalCode {
+        match value {
+            Signal::INT => libc::SIGINT,
+            Signal::ILL => libc::SIGILL,
+            Signal::ABRT => libc::SIGABRT,
+            Signal::FPE => libc::SIGFPE,
+            Signal::KILL => libc::SIGKILL,
+            Signal::SEGV => libc::SIGSEGV,
+            Signal::TERM => libc::SIGTERM,
+            Signal::HUP => libc::SIGHUP,
+            Signal::QUIT => libc::SIGQUIT,
+            Signal::ALRM => libc::SIGALRM,
+            Signal::USR1 => libc::SIGUSR1,
+            Signal::USR2 => libc::SIGUSR2,
+            Signal::CHLD => libc::SIGCHLD,
+        }
+    }
+}
 /// Makes an `execvp(3)` system call to become a new program.
 ///
 /// Note that if successful, this function will not return.

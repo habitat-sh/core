@@ -17,75 +17,24 @@ pub mod windows_child;
 
 #[allow(unused_variables)]
 #[cfg(windows)]
-#[path = "windows.rs"]
-mod imp;
+mod windows;
 
-#[cfg(not(windows))]
-#[path = "linux.rs"]
-mod imp;
+#[cfg(unix)]
+mod unix;
 
-pub use self::imp::*;
+#[cfg(windows)]
+pub use self::windows::{become_command,
+                        current_pid,
+                        handle_from_pid,
+                        is_alive,
+                        Pid};
 
-pub trait OsSignal {
-    fn os_signal(&self) -> SignalCode;
-    fn from_signal_code(_: SignalCode) -> Option<Signal>;
-}
-
-#[allow(non_snake_case)]
-#[derive(Clone, Copy, Debug)]
-pub enum Signal {
-    INT,
-    ILL,
-    ABRT,
-    FPE,
-    KILL,
-    SEGV,
-    TERM,
-    HUP,
-    QUIT,
-    ALRM,
-    USR1,
-    USR2,
-    CHLD,
-}
-
-impl From<i32> for Signal {
-    fn from(val: i32) -> Signal {
-        match val {
-            1 => Signal::HUP,
-            2 => Signal::INT,
-            3 => Signal::QUIT,
-            4 => Signal::ILL,
-            6 => Signal::ABRT,
-            8 => Signal::FPE,
-            9 => Signal::KILL,
-            10 => Signal::USR1,
-            11 => Signal::SEGV,
-            12 => Signal::USR2,
-            14 => Signal::ALRM,
-            15 => Signal::TERM,
-            17 => Signal::CHLD,
-            _ => Signal::KILL,
-        }
-    }
-}
-
-impl From<Signal> for i32 {
-    fn from(value: Signal) -> i32 {
-        match value {
-            Signal::HUP => 1,
-            Signal::INT => 2,
-            Signal::QUIT => 3,
-            Signal::ILL => 4,
-            Signal::ABRT => 6,
-            Signal::FPE => 8,
-            Signal::KILL => 9,
-            Signal::USR1 => 10,
-            Signal::SEGV => 11,
-            Signal::USR2 => 12,
-            Signal::ALRM => 14,
-            Signal::TERM => 15,
-            Signal::CHLD => 17,
-        }
-    }
-}
+#[cfg(unix)]
+pub(crate) use self::unix::SignalCode;
+#[cfg(unix)]
+pub use self::unix::{become_command,
+                     current_pid,
+                     is_alive,
+                     signal,
+                     Pid,
+                     Signal};

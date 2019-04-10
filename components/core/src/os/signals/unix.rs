@@ -14,16 +14,13 @@
 
 //! Traps and notifies UNIX signals.
 
+use crate::os::process::{Signal,
+                         SignalCode};
 use std::{collections::VecDeque,
-          sync::{Mutex,
+          sync::{atomic::Ordering,
+                 Mutex,
                  Once,
                  ONCE_INIT}};
-
-use crate::os::process::{OsSignal,
-                         Signal,
-                         SignalCode};
-
-use super::SignalEvent;
 
 static INIT: Once = ONCE_INIT;
 
@@ -44,10 +41,19 @@ unsafe extern "C" fn handle_signal(signal: SignalCode) {
                   .push_back(signal);
 }
 
+unsafe extern "C" fn handle_shutdown_signal(_signal: SignalCode) {
+    super::SHUTDOWN.store(true, Ordering::SeqCst);
+}
+
 pub fn init() {
     INIT.call_once(|| {
             self::set_signal_handlers();
         });
+}
+
+pub enum SignalEvent {
+    WaitForChild,
+    Passthrough(Signal),
 }
 
 /// Consumers should call this function fairly frequently and since the vast
@@ -58,8 +64,7 @@ pub fn check_for_signal() -> Option<SignalEvent> {
     let mut signals = CAUGHT_SIGNALS.lock().expect("Signal mutex poisoned");
 
     if let Some(code) = signals.pop_front() {
-        match Signal::from_signal_code(code) {
-            Some(Signal::INT) | Some(Signal::TERM) => Some(SignalEvent::Shutdown),
+        match from_signal_code(code) {
             Some(Signal::CHLD) => Some(SignalEvent::WaitForChild),
             Some(signal) => Some(SignalEvent::Passthrough(signal)),
             None => {
@@ -74,13 +79,24 @@ pub fn check_for_signal() -> Option<SignalEvent> {
 
 fn set_signal_handlers() {
     unsafe {
-        signal(Signal::HUP.os_signal(), handle_signal);
-        signal(Signal::INT.os_signal(), handle_signal);
-        signal(Signal::QUIT.os_signal(), handle_signal);
-        signal(Signal::ALRM.os_signal(), handle_signal);
-        signal(Signal::TERM.os_signal(), handle_signal);
-        signal(Signal::USR1.os_signal(), handle_signal);
-        signal(Signal::USR2.os_signal(), handle_signal);
-        signal(Signal::CHLD.os_signal(), handle_signal);
+        signal(libc::SIGINT, handle_shutdown_signal);
+        signal(libc::SIGTERM, handle_shutdown_signal);
+
+        signal(libc::SIGHUP, handle_signal);
+        signal(libc::SIGQUIT, handle_signal);
+        signal(libc::SIGALRM, handle_signal);
+        signal(libc::SIGUSR1, handle_signal);
+        signal(libc::SIGUSR2, handle_signal);
+        signal(libc::SIGCHLD, handle_signal);
+    }
+}
+
+/// These are the signals that we can eventually translate into
+/// some kind of event
+fn from_signal_code(code: SignalCode) -> Option<Signal> {
+    match code {
+        libc::SIGHUP => Some(Signal::HUP),
+        libc::SIGCHLD => Some(Signal::CHLD),
+        _ => None,
     }
 }
