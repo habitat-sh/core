@@ -22,13 +22,6 @@ mod windows;
 #[cfg(unix)]
 mod unix;
 
-#[cfg(windows)]
-pub use self::windows::{become_command,
-                        current_pid,
-                        handle_from_pid,
-                        is_alive,
-                        Pid};
-
 #[cfg(unix)]
 pub(crate) use self::unix::SignalCode;
 #[cfg(unix)]
@@ -39,6 +32,16 @@ pub use self::unix::{become_command,
                      Pid,
                      ShutdownSignal,
                      Signal};
+#[cfg(windows)]
+pub use self::windows::{become_command,
+                        current_pid,
+                        handle_from_pid,
+                        is_alive,
+                        Pid};
+use crate::error::Error;
+use std::{fmt,
+          str::FromStr};
+use time::Duration;
 
 /// This type encapsulates the number of seconds we should wait after
 /// send a shutdown signal to a process before we kill it.

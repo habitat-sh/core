@@ -12,23 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use crate::error::{Error,
+                   Result};
+use libc::{self,
+           pid_t};
 use std::{ffi::OsString,
+          fmt,
           io,
           os::unix::process::CommandExt,
           path::PathBuf,
-          process::Command};
-
-use libc::{self,
-           pid_t};
-
-use crate::error::{Error,
-                   Result};
+          process::Command,
+          result,
+          str::FromStr};
 
 pub type Pid = libc::pid_t;
 pub(crate) type SignalCode = libc::c_int;
 
 #[allow(non_snake_case)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum Signal {
     INT,
     ILL,
@@ -109,16 +110,10 @@ fn become_exec_command(command: PathBuf, args: &[OsString]) -> Result<()> {
     Err(error_if_failed.into())
 }
 
-pub use self::imp::*;
-use crate::error::Error;
-use std::{fmt,
-          str::FromStr};
-use time::Duration;
-
 impl FromStr for Signal {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> result::Result<Self, Self::Err> {
         let signal = match s {
             "HUP" => Signal::HUP,
             "INT" => Signal::INT,
@@ -175,7 +170,7 @@ impl Default for ShutdownSignal {
 impl FromStr for ShutdownSignal {
     type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> { Ok(ShutdownSignal(s.parse()?)) }
+    fn from_str(s: &str) -> result::Result<Self, Self::Err> { Ok(ShutdownSignal(s.parse()?)) }
 }
 
 impl fmt::Display for ShutdownSignal {
