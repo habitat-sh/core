@@ -52,7 +52,7 @@ use time::Duration;
 /// throughout our code, which can be confusing, we can just pass this
 /// around, and turn it into a `time::Duration` at the last possible
 /// moment.)
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ShutdownTimeout(u32);
 
 impl Default for ShutdownTimeout {

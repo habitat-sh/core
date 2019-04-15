@@ -158,7 +158,7 @@ impl fmt::Display for Signal {
 /// Encapsulates logic for defining the default shutdown signal we
 /// send services, and handles translation from external types at the
 /// edges of our system.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ShutdownSignal(Signal);
 
 impl Default for ShutdownSignal {
